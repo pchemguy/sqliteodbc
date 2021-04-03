@@ -853,24 +853,24 @@ test "$VER3" = "3.32.2" -o "$VER3" = "3.32.3" \
 echo "========================"
 echo "Cleanup before build ..."
 echo "========================"
-make -f Makefile.mingw-cross clean
-make -C sqlite3 -f ../mf-sqlite3.mingw-cross clean
-make -C sqlite3 -f ../mf-sqlite3fts.mingw-cross clean
-make -C sqlite3 -f ../mf-sqlite3rtree.mingw-cross clean
-make -f mf-sqlite3extfunc.mingw-cross clean
+make -f Makefile.mingw32 clean
+make -C sqlite3 -f ../mf-sqlite3.mingw32 clean
+make -C sqlite3 -f ../mf-sqlite3fts.mingw32 clean
+make -C sqlite3 -f ../mf-sqlite3rtree.mingw32 clean
+make -f mf-sqlite3extfunc.mingw32 clean
 
 echo "================="
 echo "Building zlib ..."
 echo "================="
 
-make -C zlib -f ../mf-zlib.mingw-cross all
+make -C zlib -f ../mf-zlib.mingw32 all
 
 echo "====================="
 echo "Building SQLite 3 ..."
 echo "====================="
-make -C sqlite3 -f ../mf-sqlite3.mingw-cross all
+make -C sqlite3 -f ../mf-sqlite3.mingw32 all
 test -r sqlite3/tool/mksqlite3c.tcl && \
-  make -C sqlite3 -f ../mf-sqlite3.mingw-cross sqlite3.c
+  make -C sqlite3 -f ../mf-sqlite3.mingw32 sqlite3.c
 if test -r sqlite3/sqlite3.c -a -f "$WITH_SEE" ; then
     cat sqlite3/sqlite3.c "$WITH_SEE" >sqlite3.c
     ADD_CFLAGS="$ADD_CFLAGS -DSQLITE_HAS_CODEC=1"
@@ -927,42 +927,42 @@ test "$VER3" = "3.32.2" -o "$VER3" = "3.32.3" \
  /* 
 EOD
 if test -n "$SQLITE_DLLS" ; then
-    make -C sqlite3 -f ../mf-sqlite3.mingw-cross sqlite3.dll
+    make -C sqlite3 -f ../mf-sqlite3.mingw32 sqlite3.dll
 fi
 
 echo "==============================="
 echo "Building ODBC drivers and utils"
 echo "==============================="
-make -f Makefile.mingw-cross all_no2
-make -f Makefile.mingw-cross sqlite3odbc${SEEEXT}nw.dll
+make -f Makefile.mingw32 all_no2
+make -f Makefile.mingw32 sqlite3odbc${SEEEXT}nw.dll
 
 echo "==================================="
 echo "Building SQLite3 FTS extensions ..."
 echo "==================================="
-make -C sqlite3 -f ../mf-sqlite3fts.mingw-cross clean all
+make -C sqlite3 -f ../mf-sqlite3fts.mingw32 clean all
 mv sqlite3/sqlite3_mod_fts*.dll .
 
 echo "====================================="
 echo "Building SQLite3 rtree extensions ..."
 echo "====================================="
-make -C sqlite3 -f ../mf-sqlite3rtree.mingw-cross clean all
+make -C sqlite3 -f ../mf-sqlite3rtree.mingw32 clean all
 mv sqlite3/sqlite3_mod_rtree.dll .
 
 echo "========================================"
 echo "Building SQLite3 extension functions ..."
 echo "========================================"
-make -f mf-sqlite3extfunc.mingw-cross clean all
+make -f mf-sqlite3extfunc.mingw32 clean all
 
 echo "======================="
 echo "Cleanup after build ..."
 echo "======================="
 mv sqlite3/sqlite3.c sqlite3/sqlite3.amalg
-make -C sqlite3 -f ../mf-sqlite3.mingw-cross clean
+make -C sqlite3 -f ../mf-sqlite3.mingw32 clean
 rm -f sqlite3/sqlite3.exe
-make -C sqlite3 -f ../mf-sqlite3fts.mingw-cross clean
-make -C sqlite3 -f ../mf-sqlite3rtree.mingw-cross clean
+make -C sqlite3 -f ../mf-sqlite3fts.mingw32 clean
+make -C sqlite3 -f ../mf-sqlite3rtree.mingw32 clean
 mv sqlite3/sqlite3.amalg sqlite3/sqlite3.c
-make -f mf-sqlite3extfunc.mingw-cross semiclean
+make -f mf-sqlite3extfunc.mingw32 semiclean
 
 echo "==========================="
 echo "Creating NSIS installer ..."
