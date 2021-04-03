@@ -63,7 +63,7 @@ echo "=================="
 echo "Preparing zlib ..."
 echo "=================="
 test -r zlib-${VERZ}.tar.gz || \
-    wget -c http://zlib.net/zlib-${VERZ}.tar.gz || exit 1
+    wget -c http://zlib.net/fossils/zlib-${VERZ}.tar.gz || exit 1
 rm -rf zlib-${VERZ}
 tar xzf zlib-${VERZ}.tar.gz
 ln -sf zlib-${VERZ} zlib
