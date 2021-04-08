@@ -7,7 +7,7 @@
 #    will run on the target platform.
 #
 TCC = gcc \
-      -O2 -DNO_TCL
+      -DNO_TCL
 
 # This is how we compile
 #

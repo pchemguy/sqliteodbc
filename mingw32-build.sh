@@ -64,15 +64,6 @@ test -r sqlite-src-${VER3X}.zip || \
     wget -c http://www.sqlite.org/2020/sqlite-src-${VER3X}.zip \
       --no-check-certificate
 test -r sqlite-src-${VER3X}.zip || exit 1
-test -r extension-functions.c ||
-    wget -O extension-functions.c -c \
-      'http://www.sqlite.org/contrib/download/extension-functions.c?get=25' \
-      --no-check-certificate
-if test -r extension-functions.c ; then
-  cp extension-functions.c extfunc.c
-  patch < extfunc.patch
-fi
-test -r extfunc.c || exit 1
 
 rm -rf sqlite3
 rm -rf sqlite-src-${VER3X}
@@ -88,7 +79,6 @@ perl -pi -e 's/^SRC =/SRC +=/' sqlite3/main.mk
 
 test -r sqlite3/src/shell.c.in &&
   ( cd sqlite3/src ; tclsh ../tool/mkshellc.tcl > shell.c )
-
 
 # same but new module libshell.c
 cp -p sqlite3/src/shell.c sqlite3/src/libshell.c
@@ -243,173 +233,6 @@ test "$VER3" = "3.8.8" -o "$VER3" = "3.8.9" -o "$VER3" = "3.8.10" \
 +#endif /* !defined(NO_TCL) */
 EOD
 
-
-
-
-
-
-# patch: FTS3 for 3.7.7 plus missing APIs in sqlite3ext.h/loadext.c
-test "$VER3" = "3.7.7" -o "$VER3" = "3.7.7.1" -o "$VER3" = "3.7.8" \
-  -o "$VER3" = "3.7.9" -o "$VER3" = "3.7.10" -o "$VER3" = "3.7.11" \
-  -o "$VER3" = "3.7.12" -o "$VER3" = "3.7.12.1" -o "$VER3" = "3.7.13" \
-  -o "$VER3" = "3.7.14" -o "$VER3" = "3.7.14.1" -o "$VER3" = "3.7.15" \
-  -o "$VER3" = "3.7.15.1" -o "$VER3" = "3.7.15.2" -o "$VER3" = "3.7.16" \
-  -o "$VER3" = "3.7.16.1" -o "$VER3" = "3.7.16.2" -o "$VER3" = "3.7.17" \
-  -o "$VER3" = "3.8.0" -o "$VER3" = "3.8.1" -o "$VER3" = "3.8.2" \
-  -o "$VER3" = "3.8.3" -o "$VER3" = "3.8.4" -o "$VER3" = "3.8.4.1" \
-  -o "$VER3" = "3.8.4.2" -o "$VER3" = "3.8.5" -o "$VER3" = "3.8.6" \
-  -o "$VER3" = "3.8.7" -o "$VER3" = "3.8.8" -o "$VER3" = "3.8.9" \
-  -o "$VER3" = "3.8.10" -o "$VER3" = "3.8.11" -o "$VER3" = "3.9.0" \
-  -o "$VER3" = "3.9.1" -o "$VER3" = "3.9.2" -o "$VER3" = "3.10.0" \
-  -o "$VER3" = "3.10.2" -o "$VER3" = "3.12.2" -o "$VER3" = "3.13.0" \
-  -o "$VER3" = "3.14.0" -o "$VER3" = "3.14.1" -o "$VER3" = "3.15.0" \
-  -o "$VER3" = "3.15.1" -o "$VER3" = "3.15.2" -o "$VER3" = "3.19.3" \
-  -o "$VER3" = "3.22.0" -o "$VER3" = "3.32.2" -o "$VER3" = "3.32.3" \
-  && patch -d sqlite3 -p1 <<'EOD'
---- sqlite3.orig/ext/fts3/fts3_aux.c	2011-06-24 09:06:08.000000000 +0200
-+++ sqlite3/ext/fts3/fts3_aux.c	2011-06-25 06:44:08.000000000 +0200
-@@ -14,6 +14,10 @@
- #include "fts3Int.h"
- #if !defined(SQLITE_CORE) || defined(SQLITE_ENABLE_FTS3)
- 
-+#include "sqlite3ext.h"
-+#ifndef SQLITE_CORE
-+extern const sqlite3_api_routines *sqlite3_api;
-+#endif
- #include <string.h>
- #include <assert.h>
- 
-EOD
-
-test "$VER3" = "3.7.8" -o "$VER3" = "3.7.9" -o "$VER3" = "3.7.10" \
-  -o "$VER3" = "3.7.11" -o "$VER3" = "3.7.12" -o "$VER3" = "3.7.12.1" \
-  -o "$VER3" = "3.7.13" -o "$VER3" = "3.7.14" -o "$VER3" = "3.7.14.1" \
-  -o "$VER3" = "3.7.15" -o "$VER3" = "3.7.15.1" -o "$VER3" = "3.7.15.2" \
-  -o "$VER3" = "3.7.16" -o "$VER3" = "3.7.16.1" -o "$VER3" = "3.7.16.2" \
-  -o "$VER3" = "3.7.17" -o "$VER3" = "3.8.0" -o "$VER3" = "3.8.1" \
-  -o "$VER3" = "3.8.2" -o "$VER3" = "3.8.3" -o "$VER3" = "3.8.4" \
-  -o "$VER3" = "3.8.4.1" -o "$VER3" = "3.8.4.2" -o "$VER3" = "3.8.5" \
-  -o "$VER3" = "3.8.6" -o "$VER3" = "3.8.7" -o "$VER3" = "3.8.8" \
-  -o "$VER3" = "3.8.9" -o "$VER3" = "3.8.10" -o "$VER3" = "3.8.11" \
-  -o "$VER3" = "3.9.0" -o "$VER3" = "3.9.1" -o "$VER3" = "3.9.2" \
-  -o "$VER3" = "3.10.0" -o "$VER3" = "3.10.2" -o "$VER3" = "3.12.2" \
-  -o "$VER3" = "3.13.0" -o "$VER3" = "3.14.0" -o "$VER3" = "3.14.1" \
-  -o "$VER3" = "3.15.0" -o "$VER3" = "3.15.1" -o "$VER3" = "3.15.2" \
-  -o "$VER3" = "3.19.3" -o "$VER3" = "3.22.0" -o "$VER3" = "3.32.2" \
-  -o "$VER3" = "3.32.3" \
-  && patch -d sqlite3 -p1 <<'EOD'
---- sqlite3.orig/ext/fts3/fts3.c	2011-09-19 20:46:52.000000000 +0200
-+++ sqlite3/ext/fts3/fts3.c	2011-09-20 09:47:40.000000000 +0200
-@@ -295,10 +295,6 @@
- #include "fts3Int.h"
- #if !defined(SQLITE_CORE) || defined(SQLITE_ENABLE_FTS3)
- 
--#if defined(SQLITE_ENABLE_FTS3) && !defined(SQLITE_CORE)
--# define SQLITE_CORE 1
--#endif
--
- #include <assert.h>
- #include <stdlib.h>
- #include <stddef.h>
-@@ -4826,7 +4822,7 @@
-   }
- }
- 
--#if !SQLITE_CORE
-+#ifndef SQLITE_CORE
- /*
- ** Initialize API pointer table, if required.
- */
-EOD
-
-test "$VER3" = "3.7.7" -o "$VER3" = "3.7.7.1" -o "$VER3" = "3.7.8" \
-  -o "$VER3" = "3.7.9" -o "$VER3" = "3.7.10" -o "$VER3" = "3.7.11" \
-  -o "$VER3" = "3.7.12" -o "$VER3" = "3.7.12.1" -o "$VER3" = "3.7.13" \
-  -o "$VER3" = "3.7.14" -o "$VER3" = "3.7.14.1" -o "$VER3" = "3.7.15" \
-  -o "$VER3" = "3.7.15.1" -o "$VER3" = "3.7.15.2" -o "$VER3" = "3.7.16" \
-  -o "$VER3" = "3.7.16.1" -o "$VER3" = "3.7.16.2" -o "$VER3" = "3.7.17" \
-  -o "$VER3" = "3.8.0" -o "$VER3" = "3.8.1" -o "$VER3" = "3.8.2" \
-  -o "$VER3" = "3.8.3" -o "$VER3" = "3.8.4" -o "$VER3" = "3.8.4.1" \
-  -o "$VER3" = "3.8.4.2" -o "$VER3" = "3.8.5" -o "$VER3" = "3.8.6" \
-  -o "$VER3" = "3.8.7" -o "$VER3" = "3.8.8" -o "$VER3" = "3.8.9" \
-  -o "$VER3" = "3.8.10" -o "$VER3" = "3.8.11" -o "$VER3" = "3.9.0" \
-  -o "$VER3" = "3.9.1" -o "$VER3" = "3.9.2" -o "$VER3" = "3.10.0" \
-  -o "$VER3" = "3.10.2" -o "$VER3" = "3.12.2" -o "$VER3" = "3.13.0" \
-  -o "$VER3" = "3.14.0" -o "$VER3" = "3.14.1" -o "$VER3" = "3.15.0" \
-  -o "$VER3" = "3.15.1" -o "$VER3" = "3.15.2" -o "$VER3" = "3.19.3" \
-  -o "$VER3" = "3.22.0" -o "$VER3" = "3.32.2" -o "$VER3" = "3.32.3" \
-  && patch -d sqlite3 -p1 <<'EOD'
---- sqlite3.orig/ext/fts3/fts3_expr.c	2011-06-24 09:06:08.000000000 +0200
-+++ sqlite3/ext/fts3/fts3_expr.c	2011-06-25 06:47:00.000000000 +0200
-@@ -18,6 +18,11 @@
- #include "fts3Int.h"
- #if !defined(SQLITE_CORE) || defined(SQLITE_ENABLE_FTS3)
- 
-+#include "sqlite3ext.h"
-+#ifndef SQLITE_CORE
-+extern const sqlite3_api_routines *sqlite3_api;
-+#endif
-+
- /*
- ** By default, this module parses the legacy syntax that has been 
- ** traditionally used by fts3. Or, if SQLITE_ENABLE_FTS3_PARENTHESIS
---- sqlite3.orig/ext/fts3/fts3_snippet.c	2011-06-24 09:06:08.000000000 +0200
-+++ sqlite3/ext/fts3/fts3_snippet.c	2011-06-25 06:45:47.000000000 +0200
-@@ -13,7 +13,10 @@
- 
- #include "fts3Int.h"
- #if !defined(SQLITE_CORE) || defined(SQLITE_ENABLE_FTS3)
--
-+#include "sqlite3ext.h"
-+#ifndef SQLITE_CORE
-+extern const sqlite3_api_routines *sqlite3_api;
-+#endif
- #include <string.h>
- #include <assert.h>
- 
-EOD
-
-test "$VER3" = "3.32.2" -o "$VER3" = "3.32.3" \
-  && patch -d sqlite3 -p1 <<'EOD'
---- sqlite3.orig/src/loadext.c	2020-06-04 16:01:10.000000000 +0200
-+++ sqlite3/src/loadext.c	2020-06-12 05:47:05.000000000 +0200
-@@ -591,7 +591,8 @@
-     memcpy(zAltEntry, "sqlite3_", 8);
-     for(iFile=ncFile-1; iFile>=0 && !DirSep(zFile[iFile]); iFile--){}
-     iFile++;
--    if( sqlite3_strnicmp(zFile+iFile, "lib", 3)==0 ) iFile += 3;
-+    if( sqlite3_strnicmp(zFile+iFile, "sqlite3_mod", 12)==0 ) iFile += 12;
-+    else if( sqlite3_strnicmp(zFile+iFile, "lib", 3)==0 ) iFile += 3;
-     for(iEntry=8; (c = zFile[iFile])!=0 && c!='.'; iFile++){
-       if( sqlite3Isalpha(c) ){
-         zAltEntry[iEntry++] = (char)sqlite3UpperToLower[(unsigned)c];
-EOD
-
-# revert FTS3 initializer name, would work when sqlite3_fts_init
-test "$VER3" = "3.8.2" -o "$VER3" = "3.8.3" -o "$VER3" = "3.8.4" \
-  -o "$VER3" = "3.8.4.1" -o "$VER3" = "3.8.4.2" -o "$VER3" = "3.8.5" \
-  -o "$VER3" = "3.8.6" -o "$VER3" = "3.8.7" -o "$VER3" = "3.8.8" \
-  -o "$VER3" = "3.8.9" -o "$VER3" = "3.8.10" -o "$VER3" = "3.8.11" \
-  -o "$VER3" = "3.9.0" -o "$VER3" = "3.9.1" -o "$VER3" = "3.9.2" \
-  -o "$VER3" = "3.10.0" -o "$VER3" = "3.10.2" -o "$VER3" = "3.12.2" \
-  -o "$VER3" = "3.13.0" -o "$VER3" = "3.14.0" -o "$VER3" = "3.14.1" \
-  -o "$VER3" = "3.15.0" -o "$VER3" = "3.15.1" -o "$VER3" = "3.15.2" \
-  -o "$VER3" = "3.19.3" -o "$VER3" = "3.22.0" -o "$VER3" = "3.32.2" \
-  -o "$VER3" = "3.32.3" \
-  && patch -d sqlite3 -p1 <<'EOD'
---- sqlite3.orig/ext/fts3/fts3.c      2014-03-26 10:26:28.000000000 +0100
-+++ sqlite3/ext/fts3/fts3.c  2014-03-26 16:54:39.000000000 +0100
-@@ -5747,7 +5747,7 @@
- #ifdef _WIN32
- __declspec(dllexport)
- #endif
--int sqlite3_fts3_init(
-+int sqlite3_extension_init(
-   sqlite3 *db, 
-   char **pzErrMsg,
-   const sqlite3_api_routines *pApi
-EOD
-
 # missing windows.h for DWORD, HANDLE in threads.c
 test "$VER3" = "3.8.7" -o "$VER3" = "3.8.8" -o "$VER3" = "3.8.9" \
   -o "$VER3" = "3.8.10" -o "$VER3" = "3.8.11" -o "$VER3" = "3.9.0" \
@@ -431,28 +254,6 @@ test "$VER3" = "3.8.7" -o "$VER3" = "3.8.8" -o "$VER3" = "3.8.9" \
  /* A running thread */
 EOD
 
-# tcl8.4 compatibility for mkfts5c.tcl
-test "$VER3" = "3.9.0" -o "$VER3" = "3.9.1" -o "$VER3" = "3.9.2" \
-  -o "$VER3" = "3.10.0" -o "$VER3" = "3.10.2" -o "$VER3" = "3.12.2" \
-  -o "$VER3" = "3.13.0" -o "$VER3" = "3.14.0" -o "$VER3" = "3.14.1" \
-  -o "$VER3" = "3.15.0" -o "$VER3" = "3.15.1" -o "$VER3" = "3.15.2" \
-  -o "$VER3" = "3.19.3" -o "$VER3" = "3.22.0" -o "$VER3" = "3.32.2" \
-  -o "$VER3" = "3.32.3" \
-  && patch sqlite3/ext/fts5/tool/mkfts5c.tcl <<'EOD'
---- mkfts5c.tcl.orig	2015-10-14 14:53:26.000000000 +0200
-+++ mkfts5c.tcl	2015-10-15 08:19:25.000000000 +0200
-@@ -60,7 +60,8 @@
- 
-   set L [split [readfile [file join $top manifest]]] 
-   set date [lindex $L [expr [lsearch -exact $L D]+1]]
--  set date [string range $date 0 [string last . $date]-1]
-+  set dend [expr [string last . $date]-1]
-+  set date [string range $date 0 $dend]
-   set date [string map {T { }} $date]
- 
-   return "fts5: $date $uuid"
-EOD
-
 test "$VER3" = "3.32.2" -o "$VER3" = "3.32.3" \
   && perl -pi -e 's/ rb\]/ r\]/g' sqlite3/tool/mkopcodec.tcl \
       sqlite3/tool/mkccode.tcl
@@ -462,9 +263,6 @@ echo "Cleanup before build ..."
 echo "========================"
 make -f Makefile.mingw32 clean
 make -C sqlite3 -f ../mf-sqlite3.mingw32 clean
-make -C sqlite3 -f ../mf-sqlite3fts.mingw32 clean
-make -C sqlite3 -f ../mf-sqlite3rtree.mingw32 clean
-make -f mf-sqlite3extfunc.mingw32 clean
 
 echo "================="
 echo "Building zlib ..."
@@ -475,9 +273,10 @@ make -C zlib -f ../mf-zlib.mingw32 all
 echo "====================="
 echo "Building SQLite 3 ..."
 echo "====================="
-make -C sqlite3 -f ../mf-sqlite3.mingw32 all
+
 test -r sqlite3/tool/mksqlite3c.tcl && \
   make -C sqlite3 -f ../mf-sqlite3.mingw32 sqlite3.c
+
 if test -r sqlite3/sqlite3.c -a -f "$WITH_SEE" ; then
     cat sqlite3/sqlite3.c "$WITH_SEE" >sqlite3.c
     ADD_CFLAGS="$ADD_CFLAGS -DSQLITE_HAS_CODEC=1"
@@ -509,56 +308,11 @@ test "$VER3" = "3.32.2" -o "$VER3" = "3.32.3" \
  #  ifndef access
  #   define access(f,m) _access((f),(m))
 EOD
-# rtree using internal core func
-test "$VER3" = "3.32.2" -o "$VER3" = "3.32.3" \
-  && patch sqlite3/ext/rtree/rtree.c <<'EOD'
---- rtree.c.orig	2020-06-04 16:01:10.000000000 +0200
-+++ rtree.c	2020-06-12 11:51:49.000000000 +0200
-@@ -62,7 +62,6 @@
- #else
-   #include "sqlite3.h"
- #endif
--int sqlite3GetToken(const unsigned char*,int*); /* In the SQLite core */
- 
- #ifndef SQLITE_AMALGAMATION
- #include "sqlite3rtree.h"
-@@ -3667,8 +3666,7 @@
- ** Return the length of a token
- */
- static int rtreeTokenLength(const char *z){
--  int dummy = 0;
--  return sqlite3GetToken((const unsigned char*)z,&dummy);
-+  return strlen(z);
- }
- 
- /* 
-EOD
-if test -n "$SQLITE_DLLS" ; then
-    make -C sqlite3 -f ../mf-sqlite3.mingw32 sqlite3.dll
-fi
 
 echo "==============================="
 echo "Building ODBC drivers and utils"
 echo "==============================="
 make -f Makefile.mingw32 all_no2
-make -f Makefile.mingw32 sqlite3odbc${SEEEXT}nw.dll
-
-echo "==================================="
-echo "Building SQLite3 FTS extensions ..."
-echo "==================================="
-make -C sqlite3 -f ../mf-sqlite3fts.mingw32 clean all
-mv sqlite3/sqlite3_mod_fts*.dll .
-
-echo "====================================="
-echo "Building SQLite3 rtree extensions ..."
-echo "====================================="
-make -C sqlite3 -f ../mf-sqlite3rtree.mingw32 clean all
-mv sqlite3/sqlite3_mod_rtree.dll .
-
-echo "========================================"
-echo "Building SQLite3 extension functions ..."
-echo "========================================"
-make -f mf-sqlite3extfunc.mingw32 clean all
 
 echo "======================="
 echo "Cleanup after build ..."
@@ -566,14 +320,11 @@ echo "======================="
 mv sqlite3/sqlite3.c sqlite3/sqlite3.amalg
 make -C sqlite3 -f ../mf-sqlite3.mingw32 clean
 rm -f sqlite3/sqlite3.exe
-make -C sqlite3 -f ../mf-sqlite3fts.mingw32 clean
-make -C sqlite3 -f ../mf-sqlite3rtree.mingw32 clean
 mv sqlite3/sqlite3.amalg sqlite3/sqlite3.c
-make -f mf-sqlite3extfunc.mingw32 semiclean
 
 echo "==========================="
 echo "Creating NSIS installer ..."
 echo "==========================="
 cp -p README readme.txt
 unix2dos < license.terms > license.txt || todos < license.terms > license.txt
-makensis $ADD_NSIS sqlite3odbc.nsi
+makensis $ADD_NSIS sqlite3odbc_w32.nsi

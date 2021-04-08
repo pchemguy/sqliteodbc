@@ -11,7 +11,7 @@ TOP = ../sqlite3
 #### C Compiler and options for use in building executables that
 #    will run on the platform that is doing the build.
 #
-BCC = gcc -g -O2
+BCC = gcc -g
 #BCC = /opt/ancic/bin/c89 -0
 
 #### If the target operating system supports the "usleep()" system

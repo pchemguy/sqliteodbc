@@ -73,7 +73,7 @@ EXE = .exe
 #TCC = gcc -g -O0 -Wall
 #TCC = gcc -g -O0 -Wall -fprofile-arcs -ftest-coverage
 TCC = gcc \
-      -O2 -DNO_TCL
+      -DNO_TCL
 #TCC = /opt/ansic/bin/c89 -O +z -Wl,-a,archive
 
 #### Tools used to build a static library.
