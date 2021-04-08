@@ -52,6 +52,7 @@ echo "Preparing zlib ..."
 echo "=================="
 test -r zlib-${VERZ}.tar.gz || \
     wget -c http://zlib.net/fossils/zlib-${VERZ}.tar.gz || exit 1
+rm -rf zlib
 rm -rf zlib-${VERZ}
 tar xzf zlib-${VERZ}.tar.gz
 ln -sf zlib-${VERZ} zlib
@@ -73,7 +74,7 @@ if test -r extension-functions.c ; then
 fi
 test -r extfunc.c || exit 1
 
-rm -f sqlite3
+rm -rf sqlite3
 rm -rf sqlite-src-${VER3X}
 unzip sqlite-src-${VER3X}.zip
 ln -sf sqlite-src-${VER3X} sqlite3
