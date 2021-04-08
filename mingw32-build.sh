@@ -47,16 +47,6 @@ else
     export SQLITE3_EXE="sqlite3.exe"
 fi
 
-echo "=================="
-echo "Preparing zlib ..."
-echo "=================="
-test -r zlib-${VERZ}.tar.gz || \
-    wget -c http://zlib.net/fossils/zlib-${VERZ}.tar.gz || exit 1
-rm -rf zlib
-rm -rf zlib-${VERZ}
-tar xzf zlib-${VERZ}.tar.gz
-ln -sf zlib-${VERZ} zlib
-
 echo "====================="
 echo "Preparing sqlite3 ..."
 echo "====================="
@@ -263,12 +253,6 @@ echo "Cleanup before build ..."
 echo "========================"
 make -f Makefile.mingw32 clean
 make -C sqlite3 -f ../mf-sqlite3.mingw32 clean
-
-echo "================="
-echo "Building zlib ..."
-echo "================="
-
-make -C zlib -f ../mf-zlib.mingw32 all
 
 echo "====================="
 echo "Building SQLite 3 ..."
