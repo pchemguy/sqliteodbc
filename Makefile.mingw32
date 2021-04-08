@@ -88,7 +88,7 @@ sqlite3odbcnw.o:	sqlite3odbc.c sqlite3odbc.h resource3.h
 		    -o sqlite3odbcnw.o sqlite3odbc.c
 
 sqlite3odbc$(SEEEXT).dll:	sqlite3odbc.o sqlite3odbcres.o $(SQLITE3_A10N_O)
-		$(CC) $(CFLAGS) -shared -Wl,--kill-at \
+		$(CC) $(CFLAGS) -shared -Wl,--kill-at -static-libgcc -static-libstdc++ \
 		    -Wl,--out-implib,libsqlite3odbc.a -Wl,--strip-all \
 		    -o sqlite3odbc$(SEEEXT).dll \
 		    sqlite3odbc.o sqlite3odbcres.o $(SQLITE3_A10N_O) \
