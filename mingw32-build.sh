@@ -83,25 +83,11 @@ test -r sqlite3/tool/mkshellc.tcl && \
   sed -i -e 's/ rb/ r/g' sqlite3/tool/mkshellc.tcl
 
 # appendText name clash in sqlite3 shell
-test "$VER3" = "3.32.2" -o "$VER3" = "3.32.3" \
-  && perl -pi -e 's/appendText/shAppendText/g' sqlite3/src/shell.c.in
+perl -pi -e 's/appendText/shAppendText/g' sqlite3/src/shell.c.in
+perl -pi -e 's/^SRC =/SRC +=/' sqlite3/main.mk
 
 test -r sqlite3/src/shell.c.in &&
   ( cd sqlite3/src ; tclsh ../tool/mkshellc.tcl > shell.c )
-
-patch sqlite3/main.mk <<'EOD'
---- sqlite3.orig/main.mk        2007-03-31 14:32:21.000000000 +0200
-+++ sqlite3/main.mk     2007-04-02 11:04:50.000000000 +0200
-@@ -67,7 +67,7 @@
-
- # All of the source code files.
- #
--SRC = \
-+SRC += \
-   $(TOP)/src/alter.c \
-   $(TOP)/src/analyze.c \
-   $(TOP)/src/attach.c \
-EOD
 
 
 # same but new module libshell.c
