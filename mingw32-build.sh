@@ -102,68 +102,6 @@ patch sqlite3/main.mk <<'EOD'
    $(TOP)/src/attach.c \
 EOD
 
-# use open file dialog when no database name given
-# need to link with -lcomdlg32 when enabled
-true || patch sqlite3/src/shell.c <<'EOD'
---- sqlite3.orig/src/shell.c       2006-06-06 14:32:21.000000000 +0200
-+++ sqlite3/src/shell.c     2006-07-23 11:04:50.000000000 +0200
-@@ -21,6 +21,10 @@
- #include <ctype.h>
- #include <stdarg.h>
- 
-+#if defined(_WIN32) && defined(DRIVER_VER_INFO)
-+# include <windows.h>
-+#endif
-+
- #if !defined(_WIN32) && !defined(WIN32) && !defined(__OS2__)
- # include <signal.h>
- # include <pwd.h>
-@@ -1676,6 +1676,17 @@
-   if( i<argc ){
-     data.zDbFilename = argv[i++];
-   }else{
-+#if defined(_WIN32) && defined(DRIVER_VER_INFO)
-+    static OPENFILENAME ofn;
-+    static char zDbFn[1024];
-+    ofn.lStructSize = sizeof(ofn);
-+    ofn.lpstrFile = (LPTSTR) zDbFn;
-+    ofn.nMaxFile = sizeof(zDbFn);
-+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_EXPLORER | OFN_NOCHANGEDIR;
-+    if( GetOpenFileName(&ofn) ){
-+      data.zDbFilename = zDbFn;
-+    } else
-+#endif
- #ifndef SQLITE_OMIT_MEMORYDB
-     data.zDbFilename = ":memory:";
- #else
-EOD
-# SQLite 3.5.1 Win32 mutex fix
-test "$VER3" != "3.5.1" || patch sqlite3/src/mutex_w32.c <<'EOD'
---- sqlite3.orig/src/mutex_w32.c	2007-08-30 14:10:30
-+++ sqlite3/src/mutex_w32.c	2007-09-04 22:31:3
-@@ -141,6 +141,12 @@
-   p->nRef++;
- }
- int sqlite3_mutex_try(sqlite3_mutex *p){
-+  /* The TryEnterCriticalSection() interface is not available on all
-+  ** windows systems.  Since sqlite3_mutex_try() is only used as an
-+  ** optimization, we can skip it on windows. */
-+  return SQLITE_BUSY;
-+
-+#if 0  /* Not Available */
-   int rc;
-   assert( p );
-   assert( p->id==SQLITE_MUTEX_RECURSIVE || sqlite3_mutex_notheld(p) );
-@@ -152,6 +158,7 @@
-     rc = SQLITE_BUSY;
-   }
-   return rc;
-+#endif
- }
- 
- /*
-
-EOD
 
 # same but new module libshell.c
 cp -p sqlite3/src/shell.c sqlite3/src/libshell.c
