@@ -106,61 +106,6 @@ EOD
 
 # same but new module libshell.c
 cp -p sqlite3/src/shell.c sqlite3/src/libshell.c
-test "$VER3" != "3.7.14" -a "$VER3" != "3.7.14.1" -a "$VER3" != "3.7.15" \
-  -a "$VER3" != "3.7.15.1" -a "$VER3" != "3.7.15.2" -a "$VER3" != "3.7.16" \
-  -a "$VER3" != "3.7.16.1" -a "$VER3" != "3.7.16.2" -a "$VER3" != "3.7.17" \
-  -a "$VER3" != "3.8.0" -a "$VER3" != "3.8.1" -a "$VER3" != "3.8.2" \
-  -a "$VER3" != "3.8.3" -a "$VER3" != "3.8.4" -a "$VER3" != "3.8.4.1" \
-  -a "$VER3" != "3.8.4.2" -a "$VER3" != "3.8.5" -a "$VER3" != "3.8.6" \
-  -a "$VER3" != "3.8.7" -a "$VER3" != "3.8.8" -a "$VER3" != "3.8.9" \
-  -a "$VER3" != "3.8.10" -a "$VER3" != "3.8.11" -a "$VER3" != "3.9.0" \
-  -a "$VER3" != "3.9.1" -a "$VER3" != "3.9.2" -a "$VER3" != "3.10.0" \
-  -a "$VER3" != "3.10.2" -a "$VER3" != "3.12.2" -a "$VER3" != "3.13.0" \
-  -a "$VER3" != "3.14.0" -a "$VER3" != "3.14.1" -a "$VER3" != "3.15.0" \
-  -a "$VER3" != "3.15.1" -a "$VER3" != "3.15.2" -a "$VER3" != "3.19.3" \
-  -a "$VER3" != "3.22.0" -a "$VER3" != "3.32.2" -a "$VER3" != "3.32.3" \
-  && patch sqlite3/src/libshell.c <<'EOD'
---- sqlite3.orig/src/libshell.c  2007-01-08 23:40:05.000000000 +0100
-+++ sqlite3/src/libshell.c  2007-01-10 18:35:43.000000000 +0100
-@@ -21,6 +21,10 @@
- #include <ctype.h>
- #include <stdarg.h>
-
-+#ifdef _WIN32
-+# include <windows.h>
-+#endif
-+
- #if !defined(_WIN32) && !defined(WIN32) && !defined(__OS2__)
- # include <signal.h>
- # include <pwd.h>
-@@ -1774,7 +1778,7 @@
-   strcpy(continuePrompt,"   ...> ");
- }
- 
--int main(int argc, char **argv){
-+int sqlite3_main(int argc, char **argv){
-   char *zErrMsg = 0;
-   struct callback_data data;
-   const char *zInitFile = 0;
-@@ -1816,6 +1820,17 @@
-   if( i<argc ){
-     data.zDbFilename = argv[i++];
-   }else{
-+#if defined(_WIN32) && !defined(__TINYC__)
-+    static OPENFILENAME ofn;
-+    static char zDbFn[1024];
-+    ofn.lStructSize = sizeof(ofn);
-+    ofn.lpstrFile = (LPTSTR) zDbFn;
-+    ofn.nMaxFile = sizeof(zDbFn);
-+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_EXPLORER | OFN_NOCHANGEDIR;
-+    if( GetOpenFileName(&ofn) ){
-+      data.zDbFilename = zDbFn;
-+    } else
-+#endif
- #ifndef SQLITE_OMIT_MEMORYDB
-     data.zDbFilename = ":memory:";
- #else
-EOD
 
 test "$VER3" = "3.22.0" -o "$VER3" = "3.32.2" -o "$VER3" = "3.32.3" \
   && patch sqlite3/src/os_win.h <<'EOD'
