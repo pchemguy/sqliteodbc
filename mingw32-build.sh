@@ -1,52 +1,188 @@
 #!/bin/sh
 #
+set -euo pipefail
+IFS=$'\n\t'
 
-set -e
+cleanup_EXIT() { 
+  echo "EXIT clean up: $?" 
+}
+trap cleanup_EXIT EXIT
 
-echo "====================="
-echo "Preparing sqlite3 ..."
-echo "====================="
+cleanup_TERM() {
+  echo "TERM clean up"
+}
+trap cleanup_TERM TERM
 
-wget -c https://www.sqlite.org/src/tarball/sqlite.tar.gz?r=release \
-      --no-check-certificate -O sqlite.tar.gz
+cleanup_ERR() {
+  echo "ERR clean up"
+}
+trap cleanup_ERR ERR
 
-OPTS="
--DSQLITE_DQS=0 
--DSQLITE_LIKE_DOESNT_MATCH_BLOBS 
--DSQLITE_MAX_EXPR_DEPTH=0 
--DSQLITE_OMIT_DEPRECATED 
--DSQLITE_DEFAULT_FOREIGN_KEYS=1 
--DSQLITE_DEFAULT_SYNCHRONOUS=1 
--DSQLITE_ENABLE_COLUMN_METADATA 
--DSQLITE_ENABLE_DBPAGE_VTAB 
--DSQLITE_ENABLE_DBSTAT_VTAB 
--DSQLITE_ENABLE_EXPLAIN_COMMENTS 
--DSQLITE_ENABLE_FTS3_PARENTHESIS 
--DSQLITE_ENABLE_FTS3_TOKENIZER 
--DSQLITE_ENABLE_QPSG 
--DSQLITE_ENABLE_RBU 
--DSQLITE_ENABLE_ICU 
--DSQLITE_ENABLE_STMTVTAB 
--DSQLITE_ENABLE_STAT4
--DSQLITE_SOUNDEX 
-"
+EXITCODE=0
+EC=0
+BASEDIR="$(dirname "$(readlink -f "$0")")"
+readonly BASEDIR
+readonly DBDIR="sqlite3"
+readonly BUILDDIR=${DBDIR}/build
 
-test -r sqlite3/configure || tar xzf sqlite.tar.gz 
-test -r sqlite3/configure || mv sqlite sqlite3
-cd sqlite3
+get_sqlite() {
+  cd "${BASEDIR}" || ( echo "Cannot enter ${BASEDIR}" && exit 101 )
+  local SQLite_URL="https://www.sqlite.org/src/tarball/sqlite.tar.gz?r=release"
+  if [[ ! -f ./sqlite.tar.gz ]]; then
+    echo "____________________________________________"
+  	echo "Downloading the current release of SQLite..."
+    echo "--------------------------------------------"
+    wget -c "${SQLite_URL}" --no-check-certificate -O sqlite.tar.gz \
+      || EC=$?
+    (( EC != 0 )) && echo "Error downloading SQLite ${EC}." && exit 102
+  else
+    echo "________________________________________________"
+  	echo "Using previously downloaded archive of SQLite..."
+    echo "------------------------------------------------"
+  fi
 
-test -r Makefile || ./configure \
-  --enable-all \
-  --enable-fts3 \
-  --enable-memsys5 \
-  --enable-update-limit \
-  --with-tcl="${MINGW_PREFIX}/lib/tcl8"
+  if [[ ! -f "./${DBDIR}/configure" ]]; then
+    tar xzf ./sqlite.tar.gz
+    mv ./sqlite "${DBDIR}"
+  fi
+  return 0
+}
 
-make sqlite3.c
-#"OPTS=$OPTS"
+configure_sqlite() {
+  mkdir -p "./${BUILDDIR}"
+  cd "${BASEDIR}/${BUILDDIR}" \
+    || ( echo "Cannot enter ./${BUILDDIR}" && exit 104 )
+  [[ ! -r ../configure ]] && echo "Error accessing SQLite configure" && exit 105
+
+  if [[ ! -f ./Makefile ]]; then
+    echo "_____________________"
+  	echo "Configuring SQLite..."
+    echo "---------------------"
+    ../configure --enable-fts3 --enable-memsys5 --enable-update-limit \
+      --enable-all --with-tcl="${MINGW_PREFIX}/lib/tcl8" || EXITCODE=$?
+    (( EXITCODE != 0 )) && echo "Error configuring SQLite" && exit 106
+  else
+    echo "___________________________________________"
+  	echo "Makefile found. Skipping configuring SQLite"
+    echo "-------------------------------------------"
+  fi
+  return 0
+}  
+
+patch_sqlite3_makefile() {
+  cd "${BASEDIR}/${BUILDDIR}" \
+    || ( echo "Cannot enter ./${BUILDDIR}" && exit 108 )
+  echo "____________________________"
+  echo "Patching SQLite3 Makefile..."
+  echo "----------------------------"
+  sed -e 's|^CFLAGS =\(.*\)$|CFLAGS :=\1 \$(CFLAGS)|;' \
+      -e 's|^OPT_FEATURE_FLAGS =\(.*\)$|OPT_FEATURE_FLAGS :=\1 \$(OPT_FEATURE_FLAGS)|;' \
+      -e "s|^TOP = \(.*\)$|TOP = ${BASEDIR}/${DBDIR}|;" \
+      -i Makefile
+  return 0
+}
+
+sys_lib_path=""
+libtool_sys_lib_path() {
+  cd "${BASEDIR}/${BUILDDIR}" \
+    || ( echo "Cannot enter ./${BUILDDIR}" && exit 107 )
+  echo "_____________________________________"
+  echo "Cleaning up libtool's sys_lib_path..."
+  echo "-------------------------------------"
+  local msys_root
+  msys_root="$(cygpath -m /)"
+  msys_root="${msys_root%/}"
+  local folders
+  IFS=$' \n\t'
+  read -r -a folders <<< \
+    "$(grep -oP '(?<=^sys_lib_search_path_spec=" =)(.*)(?="$)' ./libtool)"
+  IFS=$'\n\t'
+  sys_lib_path=":"
+  local folder
+  for folder in "${folders[@]}"; do
+    folder="$(readlink -f "${folder}" || true)"
+    if [[ -n "${folder}" ]]; then
+      folder="${folder#${msys_root}}"
+      if [[ -n "${sys_lib_path##*${folder}:*}" ]]; then
+        sys_lib_path+="${folder}:"
+      fi
+    fi
+  done
+
+  sys_lib_path="${sys_lib_path%:}"
+  sys_lib_path="${sys_lib_path#:}"
+  sys_lib_path="${sys_lib_path//:/ }"
+  return 0
+}
+
+patch_sqlite3_libtool() {
+  cd "${BASEDIR}/${BUILDDIR}" \
+    || ( echo "Cannot enter ./${BUILDDIR}" && exit 108 )
+  echo "___________________________"
+  echo "Patching SQLite3 libtool..."
+  echo "---------------------------"
+  local mingw_ld="$(which ld.exe)"
+  sed -e 's|^\(deplibs_check_method=\)"file_magic\(.*\)$|#\0\n\1"pass_all"|;' \
+      -e "s|^LD=\(.*\)\$|LD=\"${mingw_ld}\"|;" \
+      -e "s|^\(sys_lib_search_path_spec=\)\(.*\)\$|\1\"${sys_lib_path}\"|;" \
+      -i libtool
+  return 0
+}
+
+gen_sqlite3_amalgamation() {
+  echo "__________________________________"
+  echo "Generating SQLite3 amalgamation..."
+  echo "----------------------------------"
+  make -C "${BASEDIR}/${BUILDDIR}" sqlite3.c || EXITCODE=$?
+  (( EXITCODE != 0 )) && echo "Error generating SQLite amalgamation" && exit 109
+  return 0
+}
+
+main() {
+  get_sqlite || EXITCODE=$?
+  (( EXITCODE != 0 )) && echo "Error downloading SQLite" && exit 2
+  configure_sqlite || EXITCODE=$?
+  (( EXITCODE != 0 )) && echo "Error downloading SQLite" && exit 3
+  patch_sqlite3_makefile || EXITCODE=$?
+  if [[ -n "${MINGW_PREFIX:-}" ]]; then
+    echo "___________________________________"
+    echo "MINGW detected. Patching libtool..."
+    echo "-----------------------------------"
+    libtool_sys_lib_path || EXITCODE=$?
+    patch_sqlite3_libtool || EXITCODE=$?
+  fi
+
+  make -C "${BASEDIR}" -f "mf-sqlite3.mingw32" sqlite3.o #echo_CCCLI
+  return 0
+  gen_sqlite3_amalgamation || EXITCODE=$?
+  [[ ! -r "${BASEDIR}/${BUILDDIR}/shell.c" \
+  || ! -r "${BASEDIR}/${BUILDDIR}/sqlite3.c" \
+  || ! -r "${BASEDIR}/${BUILDDIR}/sqlite3.h" ]] \
+    && echo "Error creating SQLite amalgamation." && exit 4
+
+  return 0
+}
+
+main "$@"
+
+exit 0
+
+
+
+
+
+
+
+#-DSQLITE_ENABLE_ICU \
+
+
+#make -f ../../mf-sqlite3.mingw32 exe
+
+#sqlite3.c
+#make "OPTS=$FEATURES $CFLAGS" dll
+
 echo "=================================================="
 exit
-
 
 
 
@@ -81,8 +217,34 @@ exit
 #sed -e 's/^int SQLITE_CDECL main/int SQLITE_CDECL sqlite3_main/;' \
 #    -e 's/appendText/shAppendText/g;' \
 #    -i ./sqlite3/shell.c
-
-
+#  OPT_FEATURE_FLAGS=" \
+#  -DSQLITE_DQS=0 \
+#  -DSQLITE_LIKE_DOESNT_MATCH_BLOBS \
+#  -DSQLITE_MAX_EXPR_DEPTH=0 \
+#  -DSQLITE_OMIT_DEPRECATED \
+#  -DSQLITE_DEFAULT_FOREIGN_KEYS=1 \
+#  -DSQLITE_DEFAULT_SYNCHRONOUS=1 \
+#  -DSQLITE_ENABLE_COLUMN_METADATA \
+#  -DSQLITE_ENABLE_DBPAGE_VTAB \
+#  -DSQLITE_ENABLE_DBSTAT_VTAB \
+#  -DSQLITE_ENABLE_EXPLAIN_COMMENTS \
+#  -DSQLITE_ENABLE_FTS3_PARENTHESIS \
+#  -DSQLITE_ENABLE_FTS3_TOKENIZER \
+#  -DSQLITE_ENABLE_QPSG \
+#  -DSQLITE_ENABLE_RBU \
+#  -DSQLITE_ENABLE_STMTVTAB \
+#  -DSQLITE_ENABLE_STAT4 \
+#  -DSQLITE_SOUNDEX \
+#  -DSQLITE_ENABLE_OFFSET_SQL_FUNC\
+#  "
+#  
+#  CFLAGS=" \
+#  -static-libgcc \
+#  -static-libstdc++ \
+#  "
+#  export CFLAGS OPT_FEATURE_FLAGS
+#
+#
 exit
 echo "==============================="
 echo "Building ODBC drivers and utils"

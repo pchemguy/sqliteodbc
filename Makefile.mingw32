@@ -32,61 +32,40 @@ ifeq ($(LMSVCRT),)
 	LMSVCRT = -lmsvcrt
 endif
 
+CFLAGS +=	\
+		-DWIN32 \
+		-D_WIN32
+
 SQLITE3_INC =	sqlite3
-SQLITE3_SRC =	sqlite3/src
+SQLITE3_SRC =	sqlite3
 SQLITE3_LIB =	sqlite3/libsqlite3.a
 SQLITE3_FLAGS=	\
-		-DHAVE_SQLITE3COLUMNTABLENAME=1 \
-		-DHAVE_SQLITE3COLUMNDATABASENAME=1 \
-		-DHAVE_SQLITE3COLUMNORIGINNAME=1 \
-		-DHAVE_SQLITE3LOADEXTENSION=1 \
-		-DHAVE_SQLITE3PREPAREV2=1 \
-		-DHAVE_SQLITE3VFS=1 \
-		-DHAVE_SQLITE3PROFILE=1 \
-		-DHAVE_SQLITE3CLOSEV2=1 \
-		-DHAVE_SQLITE3STRNICMP=1 \
-		-DHAVE_SQLITE3TABLECOLUMNMETADATA=1
-SQLITE3_A10N =	sqlite3/sqlite3.c
-SQLITE3_A10N_FLAGS = \
-		-DWIN32=1 \
-		-DNDEBUG=1 \
-		-DNO_TCL \
-		-DTHREADSAFE=1 \
-		-DSQLITE_ENABLE_COLUMN_METADATA=1 \
-		-DSQLITE_DLL=1 \
-		-DSQLITE_THREADSAFE=1 \
-		-DSQLITE_OS_WIN=1 \
-		-DSQLITE_ASCII=1 \
-		-DSQLITE_SOUNDEX=1
+		-DSQLITE_SHELL_IS_UTF8
 
 
-ODBC_FLAGS =	-DHAVE_LONG_LONG=1 -DHAVE_SQLROWOFFSET=1
+ODBC_FLAGS =	-DHAVE_SQLROWOFFSET=1
 ODBC_LIB =	-lodbc
 
-all_no2:	sqlite3odbc$(SEEEXT).dll \
+all_no2:	sqlite3odbc.dll \
 		inst.exe instq.exe uninst.exe uninstq.exe \
 		adddsn.exe remdsn.exe \
 		addsysdsn.exe remsysdsn.exe \
 		SQLiteODBCInstaller.exe
 
 
-sqlite3a10n.o:	$(SQLITE3_A10N)
-		$(CC) $(CFLAGS) -c -I$(SQLITE3_INC) $(SQLITE3_A10N_FLAGS) \
-		    $(ADD_CFLAGS) -o sqlite3a10n.o $(SQLITE3_A10N)
-
 sqlite3odbc.o:	sqlite3odbc.c sqlite3odbc.h resource3.h
 		$(CC) $(CFLAGS) -c -I$(SQLITE3_INC) $(ODBC_FLAGS) \
-		    $(SQLITE3_FLAGS) $(ADD_CFLAGS) sqlite3odbc.c
+		    $(SQLITE3_FLAGS) sqlite3odbc.c
 
-sqlite3odbc$(SEEEXT).dll:	sqlite3odbc.o sqlite3odbcres.o $(SQLITE3_A10N_O)
+sqlite3odbc.dll:	sqlite3odbc.o sqlite3odbcres.o
 		$(CC) $(CFLAGS) -shared -Wl,--kill-at -static-libgcc -static-libstdc++ \
 		    -Wl,--out-implib,libsqlite3odbc.a -Wl,--strip-all \
 		    -o sqlite3odbc$(SEEEXT).dll \
-		    sqlite3odbc.o sqlite3odbcres.o $(SQLITE3_A10N_O) \
+		    sqlite3odbc.o sqlite3odbcres.o \
 		    $(SQLITE3_DLL) $(LMSVCRT) \
 		    -lodbc32 -lodbccp32 -lgdi32 -lcomdlg32 \
 		    -ladvapi32 -lshell32 -luser32 -lkernel32
-		$(STRIP) sqlite3odbc$(SEEEXT).dll
+		$(STRIP) sqlite3odbc.dll
 
 sqlite3odbcres.o:	sqlite3odbc.rc resource3.h
 		$(RC) -o sqlite3odbcres.o -I$(SQLITE3_INC) sqlite3odbc.rc
