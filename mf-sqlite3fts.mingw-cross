@@ -67,21 +67,21 @@ EXE = .exe
 #TCC = gcc -O6
 #TCC = gcc -g -O0 -Wall
 #TCC = gcc -g -O0 -Wall -fprofile-arcs -ftest-coverage
-TCC = /opt/mingw64/bin/x86_64-w64-mingw32-gcc -m32 -march=i386 -mtune=i386 \
+TCC = gcc \
       -O2 -DNO_TCL
 #TCC = /opt/ansic/bin/c89 -O +z -Wl,-a,archive
 
 #### Tools used to build a static library.
 #
 #AR = ar cr
-AR = /opt/mingw64/bin/x86_64-w64-mingw32-ar cr
+AR = ar cr
 #RANLIB = ranlib
-RANLIB = /opt/mingw64/bin/x86_64-w64-mingw32-ranlib
+RANLIB = ranlib
 
 # MKSHLIB = gcc -shared
 # SO = so
 # SHPREFIX = lib
-MKSHLIB = /opt/mingw64/bin/x86_64-w64-mingw32-ar -shared
+MKSHLIB = ar -shared
 SO = dll
 SHPREFIX =
 
