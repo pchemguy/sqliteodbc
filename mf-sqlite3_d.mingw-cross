@@ -143,6 +143,14 @@ ifeq ($(LMSVCRT),)
 endif
 
 sqlite3.dll:	$(LIBOBJ)
+	@echo '===============================$@===============================' >>makelog.log
+	@sed -e 's/ /\\\n/g' <<< '\
+		$(TCC) $(CFLAGS) -shared -Wl,--kill-at \
+	    	-Wl,--out-implib,libsqlite3.a -Wl,--strip-all \
+	    	-o sqlite3.dll $(LIBOBJ) $(LMSVCRT) \
+	    	-lcomdlg32 -lkernel32 -luser32 \
+	' >>makelog.log
+	echo "" >>"makelog.log"
 	rm -f libsqlite3.a
 	$(TCC) $(CFLAGS) -shared -Wl,--kill-at \
 	    -Wl,--out-implib,libsqlite3.a -Wl,--strip-all \
