@@ -1,8 +1,8 @@
 # Makefile for SQLite ODBC Drivers
 # using MinGW cross compiler
 
-MINGW =		
-CC =		$(MINGW)gcc
+MINGW =		/opt/mingw64/bin/x86_64-w64-mingw32-
+CC =		$(MINGW)gcc -m32 -march=i386 -mtune=i386
 STRIP =		$(MINGW)strip
 RC =		$(MINGW)windres -F pe-i386
 MAKENSIS =	makensis
@@ -145,14 +145,12 @@ resource.h:	resource.h.in
 		sed -e 's/--VERS--/'$$VERS'/g' > resource.h
 
 sqlite3a10n.o:	$(SQLITE3_A10N)
-		@echo '===============================$@===============================' >>makelog.log
-		@sed -e 's/ / \\\n/g' <<< '$(CC) $(CFLAGS) -c -I$(SQLITE3_INC) $(SQLITE3_A10N_FLAGS) $(ADD_CFLAGS) -o sqlite3a10n.o $(SQLITE3_A10N)' >>makelog.log
-		$(CC) $(CFLAGS) -c -I$(SQLITE3_INC) $(SQLITE3_A10N_FLAGS) $(ADD_CFLAGS) -o sqlite3a10n.o $(SQLITE3_A10N)
+		$(CC) $(CFLAGS) -c -I$(SQLITE3_INC) $(SQLITE3_A10N_FLAGS) \
+		    $(ADD_CFLAGS) -o sqlite3a10n.o $(SQLITE3_A10N)
 
 sqlite3odbc.o:	sqlite3odbc.c sqlite3odbc.h resource3.h
-		@echo '===============================$@===============================' >>makelog.log
-		@sed -e 's/ / \\\n/g' <<< '$(CC) $(CFLAGS) -c -I$(SQLITE3_INC) $(ODBC_FLAGS) $(SQLITE3_FLAGS) $(ADD_CFLAGS) sqlite3odbc.c' >>makelog.log
-		$(CC) $(CFLAGS) -c -I$(SQLITE3_INC) $(ODBC_FLAGS) $(SQLITE3_FLAGS) $(ADD_CFLAGS) sqlite3odbc.c
+		$(CC) $(CFLAGS) -c -I$(SQLITE3_INC) $(ODBC_FLAGS) \
+		    $(SQLITE3_FLAGS) $(ADD_CFLAGS) sqlite3odbc.c
 
 sqlite3odbcnw.o:	sqlite3odbc.c sqlite3odbc.h resource3.h
 		$(CC) $(CFLAGS) -c -I$(SQLITE3_INC) $(ODBC_FLAGS) \
@@ -160,9 +158,6 @@ sqlite3odbcnw.o:	sqlite3odbc.c sqlite3odbc.h resource3.h
 		    -o sqlite3odbcnw.o sqlite3odbc.c
 
 sqlite3odbc$(SEEEXT).dll:	sqlite3odbc.o sqlite3odbcres.o $(SQLITE3_A10N_O)
-		@echo '===============================$@===============================' >>makelog.log
-		@sed -e 's/ / \\\n/g' <<< '\
-		$(CC) $(CFLAGS) -shared -Wl,--kill-at -Wl,--out-implib,libsqlite3odbc.a -Wl,--strip-all -o sqlite3odbc$(SEEEXT).dll sqlite3odbc.o sqlite3odbcres.o $(SQLITE3_A10N_O) $(SQLITE3_DLL) $(LMSVCRT) -lodbc32 -lodbccp32 -lgdi32 -lcomdlg32 -ladvapi32 -lshell32 -luser32 -lkernel32' >>makelog.log
 		$(CC) $(CFLAGS) -shared -Wl,--kill-at \
 		    -Wl,--out-implib,libsqlite3odbc.a -Wl,--strip-all \
 		    -o sqlite3odbc$(SEEEXT).dll \
@@ -171,7 +166,6 @@ sqlite3odbc$(SEEEXT).dll:	sqlite3odbc.o sqlite3odbcres.o $(SQLITE3_A10N_O)
 		    -lodbc32 -lodbccp32 -lgdi32 -lcomdlg32 \
 		    -ladvapi32 -lshell32 -luser32 -lkernel32
 		$(STRIP) sqlite3odbc$(SEEEXT).dll
-		@echo '$(STRIP) sqlite3odbc$(SEEEXT).dll' >>makelog.log
 
 sqlite3odbc$(SEEEXT)nw.dll:	sqlite3odbcnw.o sqlite3odbcres.o $(SQLITE3_A10N_O)
 		$(CC) $(CFLAGS) -shared -Wl,--kill-at \
@@ -191,12 +185,9 @@ sqlite3.exe:		sqlite3odbc$(SEEEXT).dll sqlite3/src/minshell.c \
 		$(STRIP) sqlite3.exe
 
 sqlite3odbcres.o:	sqlite3odbc.rc resource3.h
-		@echo '===============================$@===============================' >>makelog.log
-		@sed -e 's/ / \\\n/g' <<< '$(RC) -o sqlite3odbcres.o -I$(SQLITE3_INC) sqlite3odbc.rc' >>makelog.log
 		$(RC) -o sqlite3odbcres.o -I$(SQLITE3_INC) sqlite3odbc.rc
 
 resource3.h:	resource.h.in
-		@echo '===============================$@===============================' >>makelog.log
 		VERS=`cat VERSION` ;\
 		VERS_C=`echo $$VERS | sed -e 's/\([0-9]\+\)[.]\([0-9]\+\).*/\1,\2/g'` ;\
 		sed -e 's/--VERS_C--/'$$VERS_C'/g' < resource.h.in | \
@@ -206,10 +197,7 @@ sqliteres.rc:
 		@echo "ico ICON sqlite.ico" > sqliteres.rc
 
 sqliteres.o:	sqliteres.rc
-		@echo '===============================$@===============================' >>makelog.log
-		@sed -e 's/ / \\\n/g' <<< '$(RC) -o sqliteres.o sqliteres.rc' >>makelog.log
 		$(RC) -o sqliteres.o sqliteres.rc
-		#@sed -e 's/ / \\\n/g' <<< '' >>makelog.log
 
 instres.o:	inst.rc
 		$(RC) -o instres.o -I$(SQLITE3_INC) inst.rc

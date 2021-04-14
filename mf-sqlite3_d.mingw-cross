@@ -67,15 +67,16 @@ EXE = .exe
 #TCC = gcc -O6
 #TCC = gcc -g -O0 -Wall
 #TCC = gcc -g -O0 -Wall -fprofile-arcs -ftest-coverage
-TCC = gcc -O2 -DNO_TCL
+TCC = /opt/mingw64/bin/x86_64-w64-mingw32-gcc -m32 -march=i386 -mtune=i386 \
+      -O2 -DNO_TCL
 #TCC = /opt/ansic/bin/c89 -O +z -Wl,-a,archive
 
 #### Tools used to build a static library.
 #
 #AR = ar cr
-AR = ar cr
+AR = /opt/mingw64/bin/x86_64-w64-mingw32-ar cr
 #RANLIB = ranlib
-RANLIB = ranlib
+RANLIB = /opt/mingw64/bin/x86_64-w64-mingw32-ranlib
 
 #### Extra compiler options needed for programs that use the TCL library.
 #
@@ -142,14 +143,6 @@ ifeq ($(LMSVCRT),)
 endif
 
 sqlite3.dll:	$(LIBOBJ)
-	@echo '===============================$@===============================' >>makelog.log
-	@echo '\
-	@sed -e 's/ /\n/g' <<< '\
-		$(TCC) $(CFLAGS) -shared -Wl,--kill-at \
-	    -Wl,--out-implib,libsqlite3.a -Wl,--strip-all \
-	    -o sqlite3.dll $(LIBOBJ) $(LMSVCRT) \
-	    -lcomdlg32 -lkernel32 -luser32 \
-	' >>makelog.log
 	rm -f libsqlite3.a
 	$(TCC) $(CFLAGS) -shared -Wl,--kill-at \
 	    -Wl,--out-implib,libsqlite3.a -Wl,--strip-all \

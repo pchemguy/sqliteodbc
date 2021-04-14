@@ -22,10 +22,6 @@
 #  SQLITE_DLLS=2     build drivers with refs to SQLite 2/3 DLLs
 #                    SQLite3 driver can use System.Data.SQlite.dll
 
-echo "$0" "$@" >>"makelog.log"
-echo "###############################################################" >>"makelog.log"
-echo "" >>"makelog.log"
-
 set -e
 
 VER2=2.8.17
@@ -39,19 +35,14 @@ if test -n "$NO_SQLITE2" ; then
     nov2=true
     ADD_NSIS="-DWITHOUT_SQLITE2"
 fi
-nov2=true
-ADD_NSIS="-DWITHOUT_SQLITE2"
 
 notcc=false
 if test -n "$NO_TCCEXT" ; then
     notcc=true
     ADD_NSIS="$ADD_NSIS -DWITHOUT_TCCEXT"
-#else
-#    export SQLITE_TCC_DLL="sqlite+tcc.dll"
+else
+    export SQLITE_TCC_DLL="sqlite+tcc.dll"
 fi
-notcc=true
-ADD_NSIS="$ADD_NSIS -DWITHOUT_TCCEXT"
-
 
 if test -f "$WITH_SEE" ; then
     export SEEEXT=see
@@ -85,8 +76,9 @@ echo "=================="
 test -r zlib-${VERZ}.tar.gz || \
     wget -c http://zlib.net/fossils/zlib-${VERZ}.tar.gz || exit 1
 rm -rf zlib
+rm -rf zlib-${VERZ}
 tar xzf zlib-${VERZ}.tar.gz
-mv zlib-${VERZ} zlib
+ln -sf zlib-${VERZ} zlib
 
 echo "===================="
 echo "Preparing sqlite ..."
@@ -97,7 +89,7 @@ $nov2 || test -r sqlite-${VER2}.tar.gz || \
       --no-check-certificate
 $nov2 || test -r sqlite-${VER2}.tar.gz || exit 1
 
-$nov2 || rm -f sqlite
+$nov2 || rm -rf sqlite
 $nov2 || rm -rf sqlite-${VER2}
 $nov2 || tar xzf sqlite-${VER2}.tar.gz
 $nov2 || ln -sf sqlite-${VER2} sqlite
@@ -297,7 +289,7 @@ test -r extfunc.c || exit 1
 rm -rf sqlite3
 rm -rf sqlite-src-${VER3X}
 unzip sqlite-src-${VER3X}.zip
-mv sqlite-src-${VER3X} sqlite3
+ln -sf sqlite-src-${VER3X} sqlite3
 
 test "$VER3" = "3.22.0" \
   && patch sqlite3/tool/mkshellc.tcl <<'EOD'
@@ -1955,9 +1947,9 @@ $notcc || patch -d tcc -p1 < tcc-${TCCVER}.patch
 echo "========================"
 echo "Cleanup before build ..."
 echo "========================"
-make -f Makefile_d.mingw-cross clean
+make -f Makefile.mingw-cross clean
 $notv2 || make -C sqlite -f ../mf-sqlite.mingw-cross clean
-make -C sqlite3 -f ../mf-sqlite3_d.mingw-cross clean
+make -C sqlite3 -f ../mf-sqlite3.mingw-cross clean
 make -C sqlite3 -f ../mf-sqlite3fts.mingw-cross clean
 make -C sqlite3 -f ../mf-sqlite3rtree.mingw-cross clean
 make -f mf-sqlite3extfunc.mingw-cross clean
@@ -1980,9 +1972,9 @@ make -C zlib -f ../mf-zlib.mingw-cross all
 echo "====================="
 echo "Building SQLite 3 ..."
 echo "====================="
-make -C sqlite3 -f ../mf-sqlite3_d.mingw-cross all
+make -C sqlite3 -f ../mf-sqlite3.mingw-cross all
 test -r sqlite3/tool/mksqlite3c.tcl && \
-  make -C sqlite3 -f ../mf-sqlite3_d.mingw-cross sqlite3.c
+  make -C sqlite3 -f ../mf-sqlite3.mingw-cross sqlite3.c
 if test -r sqlite3/sqlite3.c -a -f "$WITH_SEE" ; then
     cat sqlite3/sqlite3.c "$WITH_SEE" >sqlite3.c
     ADD_CFLAGS="$ADD_CFLAGS -DSQLITE_HAS_CODEC=1"
@@ -2072,9 +2064,8 @@ test "$VER3" = "3.32.2" -o "$VER3" = "3.32.3" \
  /* 
 EOD
 if test -n "$SQLITE_DLLS" ; then
-    make -C sqlite3 -f ../mf-sqlite3_d.mingw-cross sqlite3.dll
+    make -C sqlite3 -f ../mf-sqlite3.mingw-cross sqlite3.dll
 fi
-
 
 echo "==================="
 echo "Building TinyCC ..."
@@ -2092,11 +2083,11 @@ echo "==============================="
 echo "Building ODBC drivers and utils"
 echo "==============================="
 if $nov2 ; then
-    make -f Makefile_d.mingw-cross all_no2
+    make -f Makefile.mingw-cross all_no2
 else
-    make -f Makefile_d.mingw-cross
+    make -f Makefile.mingw-cross
 fi
-make -f Makefile_d.mingw-cross sqlite3odbc${SEEEXT}nw.dll
+make -f Makefile.mingw-cross sqlite3odbc${SEEEXT}nw.dll
 
 echo "=========================="
 echo "Building SQLite 2 ... UTF8"
@@ -2113,7 +2104,7 @@ echo "========================="
 echo "Building drivers ... UTF8"
 echo "========================="
 ( $nov2 && echo '*** skipped (NO_SQLITE2)' ) || true
-$nov2 || make -f Makefile_d.mingw-cross sqliteodbcu.dll sqliteu.exe
+$nov2 || make -f Makefile.mingw-cross sqliteodbcu.dll sqliteu.exe
 
 echo "==================================="
 echo "Building SQLite3 FTS extensions ..."
@@ -2163,13 +2154,13 @@ echo "Cleanup after build ..."
 echo "======================="
 $nov2 || make -C sqlite -f ../mf-sqlite.mingw-cross clean
 $nov2 || rm -f sqlite/sqlite.exe
-#mv sqlite3/sqlite3.c sqlite3/sqlite3.amalg
-#make -C sqlite3 -f ../mf-sqlite3_d.mingw-cross clean
-#rm -f sqlite3/sqlite3.exe
-#make -C sqlite3 -f ../mf-sqlite3fts.mingw-cross clean
-#make -C sqlite3 -f ../mf-sqlite3rtree.mingw-cross clean
-#mv sqlite3/sqlite3.amalg sqlite3/sqlite3.c
-#make -f mf-sqlite3extfunc.mingw-cross semiclean
+mv sqlite3/sqlite3.c sqlite3/sqlite3.amalg
+make -C sqlite3 -f ../mf-sqlite3.mingw-cross clean
+rm -f sqlite3/sqlite3.exe
+make -C sqlite3 -f ../mf-sqlite3fts.mingw-cross clean
+make -C sqlite3 -f ../mf-sqlite3rtree.mingw-cross clean
+mv sqlite3/sqlite3.amalg sqlite3/sqlite3.c
+make -f mf-sqlite3extfunc.mingw-cross semiclean
 
 echo "==========================="
 echo "Creating NSIS installer ..."
