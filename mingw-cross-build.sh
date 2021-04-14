@@ -22,7 +22,12 @@
 #  SQLITE_DLLS=2     build drivers with refs to SQLite 2/3 DLLs
 #                    SQLite3 driver can use System.Data.SQlite.dll
 
+
 set -e
+
+NO_SQLITE2=1
+NO_TCCEXT=1
+
 
 VER2=2.8.17
 VER3=3.32.3
@@ -59,11 +64,10 @@ if test "$SQLITE_DLLS" = "2" ; then
 elif test -n "$SQLITE_DLLS" ; then
     export ADD_CFLAGS="-DWITHOUT_SHELL=1 -DWITH_SQLITE_DLLS=1"
     export SQLITE3_DLL="-Lsqlite3 -lsqlite3"
-    export SQLITE3_EXE="sqlite3.exe"
-    ADD_NSIS="$ADD_NSIS -DWITH_SQLITE_DLLS"
+    ADD_NSIS="$ADD_NSIS -DWITHOUT_SQLITE3_EXE -DWITH_SQLITE_DLLS"
 else
     export SQLITE3_A10N_O="sqlite3a10n.o"
-    export SQLITE3_EXE="sqlite3.exe"
+    ADD_NSIS="$ADD_NSIS -DWITHOUT_SQLITE3_EXE"
 fi
 
 if test -n "$WITH_SOURCES" ; then
@@ -78,7 +82,7 @@ test -r zlib-${VERZ}.tar.gz || \
 rm -rf zlib
 rm -rf zlib-${VERZ}
 tar xzf zlib-${VERZ}.tar.gz
-ln -sf zlib-${VERZ} zlib
+mv zlib-${VERZ} zlib
 
 echo "===================="
 echo "Preparing sqlite ..."
@@ -92,7 +96,7 @@ $nov2 || test -r sqlite-${VER2}.tar.gz || exit 1
 $nov2 || rm -rf sqlite
 $nov2 || rm -rf sqlite-${VER2}
 $nov2 || tar xzf sqlite-${VER2}.tar.gz
-$nov2 || ln -sf sqlite-${VER2} sqlite
+$nov2 || mv sqlite-${VER2} sqlite
 
 # enable sqlite_encode_binary et.al.
 $nov2 || patch sqlite/main.mk <<'EOD'
@@ -289,7 +293,7 @@ test -r extfunc.c || exit 1
 rm -rf sqlite3
 rm -rf sqlite-src-${VER3X}
 unzip sqlite-src-${VER3X}.zip
-ln -sf sqlite-src-${VER3X} sqlite3
+mv sqlite-src-${VER3X} sqlite3
 
 test "$VER3" = "3.22.0" \
   && patch sqlite3/tool/mkshellc.tcl <<'EOD'
@@ -2173,3 +2177,4 @@ $notcc || unix2dos -k TCC/doc/readme.txt || unix2dos -p TCC/doc/readme.txt || \
   todos -p TCC/doc/readme.txt
 makensis $ADD_NSIS sqliteodbc.nsi
 
+unset SQLITE_DLLS
