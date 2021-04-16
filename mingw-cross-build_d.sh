@@ -1956,7 +1956,7 @@ echo "Cleanup before build ..."
 echo "========================"
 make -f Makefile_d.mingw-cross clean
 $notv2 || make -C sqlite -f ../mf-sqlite.mingw-cross clean
-make -C sqlite3 -f ../mf-sqlite3_d.mingw-cross clean
+make -C sqlite3 -f ../mf-sqlite3.mingw-cross clean
 make -C sqlite3 -f ../mf-sqlite3fts.mingw-cross clean
 make -C sqlite3 -f ../mf-sqlite3rtree.mingw-cross clean
 make -f mf-sqlite3extfunc.mingw-cross clean
@@ -1979,9 +1979,9 @@ make -C zlib -f ../mf-zlib.mingw-cross all
 echo "====================="
 echo "Building SQLite 3 ..."
 echo "====================="
-make -C sqlite3 -f ../mf-sqlite3_d.mingw-cross all
+make -C sqlite3 -f ../mf-sqlite3.mingw-cross all
 test -r sqlite3/tool/mksqlite3c.tcl && \
-  make -C sqlite3 -f ../mf-sqlite3_d.mingw-cross sqlite3.c
+  make -C sqlite3 -f ../mf-sqlite3.mingw-cross sqlite3.c
 if test -r sqlite3/sqlite3.c -a -f "$WITH_SEE" ; then
     cat sqlite3/sqlite3.c "$WITH_SEE" >sqlite3.c
     ADD_CFLAGS="$ADD_CFLAGS -DSQLITE_HAS_CODEC=1"
@@ -2071,7 +2071,7 @@ test "$VER3" = "3.32.2" -o "$VER3" = "3.32.3" \
  /* 
 EOD
 if test -n "$SQLITE_DLLS" ; then
-    make -C sqlite3 -f ../mf-sqlite3_d.mingw-cross sqlite3.dll
+    make -C sqlite3 -f ../mf-sqlite3.mingw-cross sqlite3.dll
 fi
 
 echo "==================="
@@ -2162,7 +2162,7 @@ echo "======================="
 #$nov2 || make -C sqlite -f ../mf-sqlite.mingw-cross clean
 #$nov2 || rm -f sqlite/sqlite.exe
 #mv sqlite3/sqlite3.c sqlite3/sqlite3.amalg
-#make -C sqlite3 -f ../mf-sqlite3_d.mingw-cross clean
+#make -C sqlite3 -f ../mf-sqlite3.mingw-cross clean
 #rm -f sqlite3/sqlite3.exe
 #make -C sqlite3 -f ../mf-sqlite3fts.mingw-cross clean
 #make -C sqlite3 -f ../mf-sqlite3rtree.mingw-cross clean
