@@ -7,9 +7,9 @@ STRIP =		$(MINGW)strip
 RC =		$(MINGW)windres -F pe-i386
 MAKENSIS =	makensis
 
-DRV_VER=	$(shell cat VERSION)
+DRV_VER = $(shell cat VERSION)
 
-CFLAGS=		-O2 -Wall -DNDEBUG=1 -DDRIVER_VER_INFO=\"$(DRV_VER)\"
+CFLAGS = -O2 -Wall -DNDEBUG=1 -DDRIVER_VER_INFO=\"$(DRV_VER)\"
 
 ifeq ($(MSVCRT),70)
 	CFLAGS += -D__MSVCRT_VERSION=0x0700
@@ -31,6 +31,14 @@ ifeq ($(LMSVCRT),)
 	CFLAGS += -D_USE_32BIT_TIME_T=1
 	LMSVCRT = -lmsvcrt
 endif
+
+SQLITE_INC = sqlite
+SQLITE_LIB = sqlite/libsqlite.a
+SQLITE_FLAGS = -DHAVE_LIBVERSION=1 \
+		-DHAVE_ENCDEC=1 \
+		-DHAVE_SQLITEATOF=1 \
+		-DHAVE_SQLITEMPRINTF=1 \
+		-DHAVE_SQLITETRACE=1
 
 SQLITE3_INC = sqlite3
 SQLITE3_SRC = sqlite3/src
@@ -85,7 +93,7 @@ define make_dll
 	$(LDEX)
 endef
 
-all_no2:	sqlite3odbc$(SEEEXT).dll \
+all_no2: sqlite3odbc$(SEEEXT).dll \
 		sqlite3_mod_blobtoxy.dll \
 		sqlite3_mod_impexp.dll \
 		sqlite3_mod_csvtable.dll \
@@ -110,11 +118,11 @@ sqlite3odbcnw.o: sqlite3odbc.c sqlite3odbc.h resource3.h
 		$(make_obj)
 
 sqlite3odbc$(SEEEXT).dll sqlite3odbc$(SEEEXT)nw.dll: \
-		LDEX = $(BASE_LD) $(SQLITE3_DLL) -lodbc32 -lodbccp32
-sqlite3odbc$(SEEEXT).dll: sqlite3odbc.o sqlite3odbcres.o $(SQLITE3_A10N_O)
+		LDEX = $(BASE_LD) -lodbc32 -lodbccp32
+sqlite3odbc$(SEEEXT).dll: sqlite3odbc.o sqlite3odbcres.o $(SQLITE3_A10N_O) $(SQLITE3_DLL)
 		$(make_dll)
 		$(STRIP) $@
-sqlite3odbc$(SEEEXT)nw.dll: sqlite3odbcnw.o sqlite3odbcres.o $(SQLITE3_A10N_O)
+sqlite3odbc$(SEEEXT)nw.dll: sqlite3odbcnw.o sqlite3odbcres.o $(SQLITE3_A10N_O) $(SQLITE3_DLL)
 		$(make_dll)
 		$(STRIP) $@
 
@@ -123,7 +131,7 @@ sqlite3.exe: sqlite3odbc$(SEEEXT).dll sqlite3/src/minshell.c sqliteres.o
 		    -o $@ $(wordlist 2,$(words $^),$^) 
 		$(STRIP) $@
 
-resource3.h:	resource.h.in
+resource3.h: resource.h.in
 		VERS=`cat VERSION` ;\
 		VERS_C=`echo $$VERS | sed -e 's/\([0-9]\+\)[.]\([0-9]\+\).*/\1,\2/g'` ;\
 		sed -e 's/--VERS_C--/'$$VERS_C'/g' < resource.h.in | \

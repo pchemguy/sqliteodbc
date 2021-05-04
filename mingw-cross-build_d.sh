@@ -22,6 +22,10 @@
 #  SQLITE_DLLS=2     build drivers with refs to SQLite 2/3 DLLs
 #                    SQLite3 driver can use System.Data.SQlite.dll
 
+# Run as :
+# unset SQLITE_DLLS; ./mingw-cross-build_d.sh
+# SQLITE_DLLS=1; ./mingw-cross-build_d.sh
+# SQLITE_DLLS=2; ./mingw-cross-build_d.sh
 
 set -e
 
