@@ -18,12 +18,14 @@ cleanup_ERR() {
 }
 trap cleanup_ERR ERR
 
+
 EXITCODE=0
 EC=0
-BASEDIR="$(dirname "$(readlink -f "$0")")"
+BASEDIR="$(dirname "$(realpath "$0")")"
 readonly BASEDIR
 readonly DBDIR="sqlite3"
 readonly BUILDDIR=${DBDIR}/build
+
 
 get_sqlite() {
   cd "${BASEDIR}" || ( echo "Cannot enter ${BASEDIR}" && exit 101 )
@@ -48,6 +50,7 @@ get_sqlite() {
   return 0
 }
 
+
 configure_sqlite() {
   mkdir -p "./${BUILDDIR}"
   cd "${BASEDIR}/${BUILDDIR}" \
@@ -55,19 +58,20 @@ configure_sqlite() {
   [[ ! -r ../configure ]] && echo "Error accessing SQLite configure" && exit 105
 
   if [[ ! -f ./Makefile ]]; then
-    echo "_____________________"
-  	echo "Configuring SQLite..."
-    echo "---------------------"
+    echo "______________________"
+  	echo "Configuring SQLite3..."
+    echo "----------------------"
     ../configure --enable-fts3 --enable-memsys5 --enable-update-limit \
       --enable-all --with-tcl="${MINGW_PREFIX}/lib/tcl8" || EXITCODE=$?
     (( EXITCODE != 0 )) && echo "Error configuring SQLite" && exit 106
   else
-    echo "___________________________________________"
-  	echo "Makefile found. Skipping configuring SQLite"
-    echo "-------------------------------------------"
+    echo "____________________________________________"
+  	echo "Makefile found. Skipping configuring SQLite3"
+    echo "--------------------------------------------"
   fi
   return 0
 }  
+
 
 patch_sqlite3_makefile() {
   cd "${BASEDIR}/${BUILDDIR}" \
@@ -81,6 +85,7 @@ patch_sqlite3_makefile() {
       -i Makefile
   return 0
 }
+
 
 sys_lib_path=""
 libtool_sys_lib_path() {
@@ -100,7 +105,7 @@ libtool_sys_lib_path() {
   sys_lib_path=":"
   local folder
   for folder in "${folders[@]}"; do
-    folder="$(readlink -f "${folder}" || true)"
+    folder="$(realpath "${folder}" || true)"
     if [[ -n "${folder}" ]]; then
       folder="${folder#${msys_root}}"
       if [[ -n "${sys_lib_path##*${folder}:*}" ]]; then
@@ -114,6 +119,7 @@ libtool_sys_lib_path() {
   sys_lib_path="${sys_lib_path//:/ }"
   return 0
 }
+
 
 patch_sqlite3_libtool() {
   cd "${BASEDIR}/${BUILDDIR}" \
@@ -129,20 +135,43 @@ patch_sqlite3_libtool() {
   return 0
 }
 
+
 gen_sqlite3_amalgamation() {
   echo "__________________________________"
   echo "Generating SQLite3 amalgamation..."
   echo "----------------------------------"
   make -C "${BASEDIR}/${BUILDDIR}" sqlite3.c || EXITCODE=$?
-  (( EXITCODE != 0 )) && echo "Error generating SQLite amalgamation" && exit 109
+  (( EXITCODE != 0 )) && echo "Error generating SQLite3 amalgamation" && exit 109
   return 0
 }
 
+
+patch_sqlite3_libshell_c() {
+  echo "__________________________________________________________________"
+  echo "Adjust names of the entry point and appendText in (lib)shell.c ..."
+  echo "------------------------------------------------------------------"  
+  cp "${BASEDIR}/${BUILDDIR}/shell.c" "${BASEDIR}/${BUILDDIR}/libshell.c" || EXITCODE=$?
+  (( EXITCODE != 0 )) && echo "Error copying <shell.c>." && exit 110
+  sed -e 's/^int SQLITE_CDECL main/int SQLITE_CDECL sqlite3_main/;' \
+      -e 's/appendText/shAppendText/g;' \
+      -i "${BASEDIR}/${BUILDDIR}/libshell.c"
+  return 0
+}
+
+
 main() {
+  export NO_SQLITE2=1
+  export NO_TCCEXT=1
+
+  LOG_FILE=${LOG_FILE:-makelog.log}
+  echo "SQLITE_DLLS=${SQLITE_DLLS:-};" "$0" "$@" >>"${LOG_FILE}"
+  echo "###############################################################" >>"${LOG_FILE}"
+  echo "" >>"${LOG_FILE}"
+
   get_sqlite || EXITCODE=$?
-  (( EXITCODE != 0 )) && echo "Error downloading SQLite" && exit 2
+  (( EXITCODE != 0 )) && echo "Error downloading SQLite3" && exit 201
   configure_sqlite || EXITCODE=$?
-  (( EXITCODE != 0 )) && echo "Error downloading SQLite" && exit 3
+  (( EXITCODE != 0 )) && echo "Error configuring SQLite3" && exit 202
   patch_sqlite3_makefile || EXITCODE=$?
   if [[ -n "${MINGW_PREFIX:-}" ]]; then
     echo "___________________________________"
@@ -150,18 +179,24 @@ main() {
     echo "-----------------------------------"
     libtool_sys_lib_path || EXITCODE=$?
     patch_sqlite3_libtool || EXITCODE=$?
+    (( EXITCODE != 0 )) && echo "Error patching <libtool>" && exit 203
   fi
 
-  make -C "${BASEDIR}" -f "mf-sqlite3.mingw32" sqlite3.o #echo_CCCLI
-  return 0
   gen_sqlite3_amalgamation || EXITCODE=$?
   [[ ! -r "${BASEDIR}/${BUILDDIR}/shell.c" \
   || ! -r "${BASEDIR}/${BUILDDIR}/sqlite3.c" \
   || ! -r "${BASEDIR}/${BUILDDIR}/sqlite3.h" ]] \
-    && echo "Error creating SQLite amalgamation." && exit 4
+    && echo "Error creating SQLite3 amalgamation." && exit 204
 
+  exit
+
+  patch_sqlite3_libshell_c || EXITCODE=$?
+  (( EXITCODE != 0 )) && echo "Error patching <libshell.c>" && exit 205
+
+  make -C "${BASEDIR}" -f "mf-sqlite3.mingw" sqlite3.o #echo_CCCLI
   return 0
 }
+
 
 main "$@"
 
