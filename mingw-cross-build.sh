@@ -30,6 +30,9 @@ VER3X=3320300
 VERZ=1.2.8
 TCCVER=0.9.26
 
+NO_SQLITE2=1
+NO_TCCEXT=1
+
 nov2=false
 if test -n "$NO_SQLITE2" ; then
     nov2=true
@@ -74,7 +77,7 @@ echo "=================="
 echo "Preparing zlib ..."
 echo "=================="
 test -r zlib-${VERZ}.tar.gz || \
-    wget -c http://zlib.net/zlib-${VERZ}.tar.gz || exit 1
+    wget -c http://zlib.net/fossils/zlib-${VERZ}.tar.gz || exit 1
 rm -rf zlib-${VERZ}
 tar xzf zlib-${VERZ}.tar.gz
 ln -sf zlib-${VERZ} zlib

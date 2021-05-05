@@ -11,7 +11,7 @@ TOP = ../sqlite3
 #### C Compiler and options for use in building executables that
 #    will run on the platform that is doing the build.
 #
-BCC = gcc -g -O2
+BCC = gcc -static-libgcc -static-libstdc++ -g -O2
 #BCC = /opt/ancic/bin/c89 -0
 
 #### If the target operating system supports the "usleep()" system
@@ -64,24 +64,24 @@ EXE = .exe
 #    will run on the target platform.  This is usually the same
 #    as BCC, unless you are cross-compiling.
 #
-#TCC = gcc -O6
-#TCC = gcc -g -O0 -Wall
-#TCC = gcc -g -O0 -Wall -fprofile-arcs -ftest-coverage
-TCC = /opt/mingw64/bin/x86_64-w64-mingw32-gcc -m32 -march=i386 -mtune=i386 \
+#TCC = gcc -static-libgcc -static-libstdc++ -O6
+#TCC = gcc -static-libgcc -static-libstdc++ -g -O0 -Wall
+#TCC = gcc -static-libgcc -static-libstdc++ -g -O0 -Wall -fprofile-arcs -ftest-coverage
+TCC = gcc -static-libgcc -static-libstdc++  \
       -O2 -DNO_TCL
 #TCC = /opt/ansic/bin/c89 -O +z -Wl,-a,archive
 
 #### Tools used to build a static library.
 #
 #AR = ar cr
-AR = /opt/mingw64/bin/x86_64-w64-mingw32-ar cr
+AR = ar cr
 #RANLIB = ranlib
-RANLIB = /opt/mingw64/bin/x86_64-w64-mingw32-ranlib
+RANLIB = ranlib
 
-# MKSHLIB = gcc -shared
+# MKSHLIB = gcc -static-libgcc -static-libstdc++ -shared
 # SO = so
 # SHPREFIX = lib
-MKSHLIB = /opt/mingw64/bin/x86_64-w64-mingw32-ar -shared
+MKSHLIB = ar -shared
 SO = dll
 SHPREFIX =
 

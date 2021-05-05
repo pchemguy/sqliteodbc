@@ -6,7 +6,7 @@
 #### C Compile and options for use in building executables that 
 #    will run on the target platform.
 #
-TCC = /opt/mingw64/bin/x86_64-w64-mingw32-gcc -O2 -DNO_TCL
+TCC = gcc -static-libgcc -static-libstdc++ -O2 -DNO_TCL
 
 # This is how we compile
 #
@@ -44,10 +44,10 @@ ifeq ($(LMSVCRT),)
 	LMSVCRT = -lmsvcrt
 endif
 
-# MKSHLIB = gcc -shared
+# MKSHLIB = gcc -static-libgcc -static-libstdc++ -shared
 # SO = so
 # SHPREFIX = lib
-MKSHLIB = /opt/mingw64/bin/x86_64-w64-mingw32-ar -shared
+MKSHLIB = ar -shared
 SO = dll
 
 # This is the default Makefile target.  The objects listed here
