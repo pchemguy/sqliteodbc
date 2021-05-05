@@ -87,195 +87,6 @@ rm -rf zlib-${VERZ}
 tar xzf zlib-${VERZ}.tar.gz
 mv zlib-${VERZ} zlib
 
-echo "===================="
-echo "Preparing sqlite ..."
-echo "===================="
-( $nov2 && echo '*** skipped (NO_SQLITE2)' ) || true
-$nov2 || test -r sqlite-${VER2}.tar.gz || \
-    wget -c http://www.sqlite.org/sqlite-${VER2}.tar.gz \
-      --no-check-certificate
-$nov2 || test -r sqlite-${VER2}.tar.gz || exit 1
-
-$nov2 || rm -rf sqlite
-$nov2 || rm -rf sqlite-${VER2}
-$nov2 || tar xzf sqlite-${VER2}.tar.gz
-$nov2 || mv sqlite-${VER2} sqlite
-
-# enable sqlite_encode_binary et.al.
-$nov2 || patch sqlite/main.mk <<'EOD'
---- sqlite.orig/main.mk	2005-04-24 00:43:23.000000000 +0200
-+++ sqlite/main.mk	2006-03-16 14:29:55.000000000 +0100
-@@ -55,7 +55,7 @@
- # Object files for the SQLite library.
- #
- LIBOBJ = attach.o auth.o btree.o btree_rb.o build.o copy.o date.o delete.o \
--         expr.o func.o hash.o insert.o \
-+         expr.o func.o hash.o insert.o encode.o \
-          main.o opcodes.o os.o pager.o parse.o pragma.o printf.o random.o \
-          select.o table.o tokenize.o trigger.o update.o util.o \
-          vacuum.o vdbe.o vdbeaux.o where.o tclsqlite.o
-EOD
-
-# display encoding
-$nov2 || patch sqlite/src/shell.c <<'EOD'
---- sqlite.orig/src/shell.c	2005-04-24 00:43:22.000000000 +0200
-+++ sqlite/src/shell.c	2006-05-23 08:22:01.000000000 +0200
-@@ -1180,6 +1180,7 @@
-   "   -separator 'x'       set output field separator (|)\n"
-   "   -nullvalue 'text'    set text string for NULL values\n"
-   "   -version             show SQLite version\n"
-+  "   -encoding            show SQLite encoding\n"
-   "   -help                show this text, also show dot-commands\n"
- ;
- static void usage(int showDetail){
-@@ -1297,7 +1298,10 @@
-     }else if( strcmp(z,"-echo")==0 ){
-       data.echoOn = 1;
-     }else if( strcmp(z,"-version")==0 ){
--      printf("%s\n", sqlite_version);
-+      printf("%s\n", sqlite_libversion());
-+      return 1;
-+    }else if( strcmp(z,"-encoding")==0 ){
-+      printf("%s\n", sqlite_libencoding());
-       return 1;
-     }else if( strcmp(z,"-help")==0 ){
-       usage(1);
-@@ -1330,9 +1334,9 @@
-       char *zHome;
-       char *zHistory = 0;
-       printf(
--        "SQLite version %s\n"
-+        "SQLite version %s encoding %s\n"
-         "Enter \".help\" for instructions\n",
--        sqlite_version
-+        sqlite_libversion(), sqlite_libencoding()
-       );
-       zHome = find_home_dir();
-       if( zHome && (zHistory = malloc(strlen(zHome)+20))!=0 ){
-EOD
-
-# use open file dialog when no database name given
-# need to link with -lcomdlg32 when enabled
-true || patch sqlite/src/shell.c <<'EOD'
---- sqlite.orig/src/shell.c        2006-07-23 11:18:13.000000000 +0200
-+++ sqlite/src/shell.c     2006-07-23 11:30:26.000000000 +0200
-@@ -20,6 +20,10 @@
- #include "sqlite.h"
- #include <ctype.h>
- 
-+#if defined(_WIN32) && defined(DRIVER_VER_INFO)
-+# include <windows.h>
-+#endif
-+
- #if !defined(_WIN32) && !defined(WIN32) && !defined(__MACOS__)
- # include <signal.h>
- # include <pwd.h>
-@@ -1246,6 +1250,17 @@
-   if( i<argc ){
-     data.zDbFilename = argv[i++];
-   }else{
-+#if defined(_WIN32) && defined(DRIVER_VER_INFO)
-+    static OPENFILENAME ofn;
-+    static char zDbFn[1024];
-+    ofn.lStructSize = sizeof(ofn);
-+    ofn.lpstrFile = (LPTSTR) zDbFn;
-+    ofn.nMaxFile = sizeof(zDbFn);
-+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_EXPLORER | OFN_NOCHANGEDIR;
-+    if( GetOpenFileName(&ofn) ){
-+      data.zDbFilename = zDbFn;
-+    } else
-+#endif
-     data.zDbFilename = ":memory:";
-   }
-   if( i<argc ){
-EOD
-
-# same but new module libshell.c
-$nov2 || patch sqlite/main.mk <<'EOD'
---- sqlite.orig/main.mk        2007-01-10 19:30:52.000000000 +0100
-+++ sqlite/main.mk     2007-01-10 19:33:39.000000000 +0100
-@@ -54,7 +54,7 @@
- 
- # Object files for the SQLite library.
- #
--LIBOBJ = attach.o auth.o btree.o btree_rb.o build.o copy.o date.o delete.o \
-+LIBOBJ += attach.o auth.o btree.o btree_rb.o build.o copy.o date.o delete.o \
-          expr.o func.o hash.o insert.o encode.o \
-          main.o opcodes.o os.o pager.o parse.o pragma.o printf.o random.o \
-          select.o table.o tokenize.o trigger.o update.o util.o \
-EOD
-$nov2 || cp -p sqlite/src/shell.c sqlite/src/libshell.c
-$nov2 || patch sqlite/src/libshell.c <<'EOD'
---- sqlite.orig/src/libshell.c  2007-01-10 19:13:01.000000000 +0100
-+++ sqlite/src/libshell.c  2007-01-10 19:25:56.000000000 +0100
-@@ -20,6 +20,10 @@
- #include "sqlite.h"
- #include <ctype.h>
- 
-+#ifdef _WIN32
-+# include <windows.h>
-+#endif
-+
- #if !defined(_WIN32) && !defined(WIN32) && !defined(__MACOS__)
- # include <signal.h>
- # include <pwd.h>
-@@ -1205,7 +1209,7 @@
-   strcpy(continuePrompt,"   ...> ");
- }
- 
--int main(int argc, char **argv){
-+int sqlite_main(int argc, char **argv){
-   char *zErrMsg = 0;
-   struct callback_data data;
-   const char *zInitFile = 0;
-@@ -1246,6 +1250,17 @@
-   if( i<argc ){
-     data.zDbFilename = argv[i++];
-   }else{
-+#if defined(_WIN32) && !defined(__TINYC__)
-+    static OPENFILENAME ofn;
-+    static char zDbFn[1024];
-+    ofn.lStructSize = sizeof(ofn);
-+    ofn.lpstrFile = (LPTSTR) zDbFn;
-+    ofn.nMaxFile = sizeof(zDbFn);
-+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_EXPLORER | OFN_NOCHANGEDIR;
-+    if( GetOpenFileName(&ofn) ){
-+      data.zDbFilename = zDbFn;
-+    } else
-+#endif
-     data.zDbFilename = ":memory:";
-   }
-   if( i<argc ){
-EOD
-
-$nov2 || rm -f sqlite/src/minshell.c
-$nov2 || touch sqlite/src/minshell.c
-$nov2 || patch sqlite/src/minshell.c <<'EOD'
---- sqlite.orig/src/minshell.c  2007-01-10 18:46:47.000000000 +0100
-+++ sqlite/src/minshell.c  2007-01-10 18:46:47.000000000 +0100
-@@ -0,0 +1,20 @@
-+/*
-+** 2001 September 15
-+**
-+** The author disclaims copyright to this source code.  In place of
-+** a legal notice, here is a blessing:
-+**
-+**    May you do good and not evil.
-+**    May you find forgiveness for yourself and forgive others.
-+**    May you share freely, never taking more than you give.
-+**
-+*************************************************************************
-+** This file contains code to implement the "sqlite" command line
-+** utility for accessing SQLite databases.
-+*/
-+
-+int sqlite_main(int argc, char **argv);
-+
-+int main(int argc, char **argv){
-+  return sqlite_main(argc, argv);
-+}
-EOD
-
 echo "====================="
 echo "Preparing sqlite3 ..."
 echo "====================="
@@ -1938,19 +1749,6 @@ test "$VER3" = "3.32.2" -o "$VER3" = "3.32.3" \
   && perl -pi -e 's/ rb\]/ r\]/g' sqlite3/tool/mkopcodec.tcl \
       sqlite3/tool/mkccode.tcl
 
-echo "===================="
-echo "Preparing TinyCC ..."
-echo "===================="
-( $notcc && echo '*** skipped (NO_TCCEXT)' ) || true
-$notcc || test -r tcc-${TCCVER}.tar.bz2 || \
-    wget -c http://download.savannah.gnu.org/releases/tinycc/tcc-${TCCVER}.tar.bz2
-$notcc || test -r tcc-${TCCVER}.tar.bz2 || exit 1
-
-$notcc || rm -rf tcc tcc-${TCCVER}
-$notcc || tar xjf tcc-${TCCVER}.tar.bz2
-$notcc || ln -sf tcc-${TCCVER} tcc
-$notcc || patch -d tcc -p1 < tcc-${TCCVER}.patch
-
 echo "========================"
 echo "Cleanup before build ..."
 echo "========================"
@@ -1961,15 +1759,6 @@ make -C sqlite3 -f ../mf-sqlite3fts.mingw-cross clean
 make -C sqlite3 -f ../mf-sqlite3rtree.mingw-cross clean
 make -f mf-sqlite3extfunc.mingw-cross clean
 
-echo "============================="
-echo "Building SQLite 2 ... ISO8859"
-echo "============================="
-( $nov2 && echo '*** skipped (NO_SQLITE2)' ) || true
-$nov2 || make -C sqlite -f ../mf-sqlite.mingw-cross all
-if test -n "$SQLITE_DLLS" ; then
-    $nov2 || make -C sqlite -f ../mf-sqlite.mingw-cross sqlite.dll
-fi
-
 echo "================="
 echo "Building zlib ..."
 echo "================="
@@ -1979,7 +1768,6 @@ make -C zlib -f ../mf-zlib.mingw-cross all
 echo "====================="
 echo "Building SQLite 3 ..."
 echo "====================="
-make -C sqlite3 -f ../mf-sqlite3.mingw-cross all
 test -r sqlite3/tool/mksqlite3c.tcl && \
   make -C sqlite3 -f ../mf-sqlite3.mingw-cross sqlite3.c
 if test -r sqlite3/sqlite3.c -a -f "$WITH_SEE" ; then
@@ -2074,18 +1862,6 @@ if test -n "$SQLITE_DLLS" ; then
     make -C sqlite3 -f ../mf-sqlite3.mingw-cross sqlite3.dll
 fi
 
-echo "==================="
-echo "Building TinyCC ..."
-echo "==================="
-( $notcc && echo '*** skipped (NO_TCCEXT)' ) || true
-$notcc || ( cd tcc ; sh mingw-cross-build.sh )
-# copy SQLite headers into TCC install include directory
-$notcc || $nov2 || cp -p sqlite/sqlite.h TCC/include
-$notcc || cp -p sqlite3/sqlite3.h sqlite3/src/sqlite3ext.h TCC/include
-# copy LGPL to TCC install doc directory
-$notcc || cp -p tcc-${TCCVER}/COPYING TCC/doc
-$notcc || cp -p tcc-${TCCVER}/README TCC/doc/readme.txt
-
 echo "==============================="
 echo "Building ODBC drivers and utils"
 echo "==============================="
@@ -2095,72 +1871,7 @@ echo "Should include patched libshell.c at the end"
 echo "and, possibly, compilation options at the top"
 echo "Press enter to continue..."
 read DUMMY
-if $nov2 ; then
-    make -f Makefile.mingw-cross all_no2
-else
-    make -f Makefile.mingw-cross
-fi
-make -f Makefile_d.mingw-cross sqlite3odbc${SEEEXT}nw.dll
-
-echo "=========================="
-echo "Building SQLite 2 ... UTF8"
-echo "=========================="
-( $nov2 && echo '*** skipped (NO_SQLITE2)' ) || true
-$nov2 || make -C sqlite -f ../mf-sqlite.mingw-cross clean
-$nov2 || make -C sqlite -f ../mf-sqlite.mingw-cross ENCODING=UTF8 all
-if test -n "$SQLITE_DLLS" ; then
-    $nov2 || \
-       make -C sqlite -f ../mf-sqlite.mingw-cross ENCODING=UTF8 sqliteu.dll
-fi
-
-echo "========================="
-echo "Building drivers ... UTF8"
-echo "========================="
-( $nov2 && echo '*** skipped (NO_SQLITE2)' ) || true
-$nov2 || make -f Makefile_d.mingw-cross sqliteodbcu.dll sqliteu.exe
-
-echo "==================================="
-echo "Building SQLite3 FTS extensions ..."
-echo "==================================="
-make -C sqlite3 -f ../mf-sqlite3fts.mingw-cross clean all
-mv sqlite3/sqlite3_mod_fts*.dll .
-
-echo "====================================="
-echo "Building SQLite3 rtree extensions ..."
-echo "====================================="
-make -C sqlite3 -f ../mf-sqlite3rtree.mingw-cross clean all
-mv sqlite3/sqlite3_mod_rtree.dll .
-
-echo "========================================"
-echo "Building SQLite3 extension functions ..."
-echo "========================================"
-make -f mf-sqlite3extfunc.mingw-cross clean all
-
-echo "============================"
-echo "Building DLL import defs ..."
-echo "============================"
-# requires wine: create .def files with tiny_impdef.exe
-# for all .dll files which provide SQLite
-( $notcc && echo '*** skipped (NO_TCCEXT)' ) || true
-$notcc || $nov2 || wine TCC/tiny_impdef.exe \
-  sqliteodbc.dll -o TCC/lib/sqlite.def
-$notcc || $nov2 || wine TCC/tiny_impdef.exe \
-  sqliteodbcu.dll -o TCC/lib/sqliteu.def
-$notcc || wine TCC/tiny_impdef.exe sqlite3odbc.dll -o TCC/lib/sqlite3.def
-
-if test -n "$SQLITE_DLLS" ; then
-    $nov2 || mv sqlite/sqlite.dll .
-    $nov2 || mv sqlite/sqliteu.dll .
-    mv sqlite3/sqlite3.dll .
-fi
-
-if test -n "$SQLITE_DLLS" ; then
-    $notcc || $nov2 || wine TCC/tiny_impdef.exe \
-      sqlite.dll -o TCC/lib/sqlite.def
-    $notcc || $nov2 || wine TCC/tiny_impdef.exe \
-      sqliteu.dll -o TCC/lib/sqliteu.def
-    $notcc || wine TCC/tiny_impdef.exe sqlite3.dll -o TCC/lib/sqlite3.def
-fi
+make -f Makefile_d.mingw-cross all
 
 echo "======================="
 echo "Cleanup after build ..."
@@ -2180,9 +1891,5 @@ echo "Creating NSIS installer ..."
 echo "==========================="
 cp -p README readme.txt
 unix2dos < license.terms > license.txt || todos < license.terms > license.txt
-$notcc || unix2dos -k TCC/doc/COPYING || unix2dos -p TCC/doc/COPYING || \
-  todos -p TCC/doc/COPYING
-$notcc || unix2dos -k TCC/doc/readme.txt || unix2dos -p TCC/doc/readme.txt || \
-  todos -p TCC/doc/readme.txt
 makensis $ADD_NSIS sqliteodbc.nsi
 
