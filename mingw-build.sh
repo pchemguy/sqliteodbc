@@ -149,8 +149,9 @@ set_icu() {
   cp "${MINGW_PREFIX}/bin/libicuin68.dll" ./
   cp "${MINGW_PREFIX}/bin/libicuuc68.dll" ./
   cp "${MINGW_PREFIX}/bin/libwinpthread-1.dll" ./
-  cp "${MINGW_PREFIX}/bin/libgcc_s_dw2-1.dll" ./
   cp "${MINGW_PREFIX}/bin/libstdc++-6.dll" ./
+  cp "${MINGW_PREFIX}/bin/libgcc_s_dw2-1.dll" ./ \
+    || cp "${MINGW_PREFIX}/bin/libgcc_s_seh-1.dll" ./
 
   ICU_CFLAGS="$(icu-config --cflags --cppflags)"
   ICU_LDFLAGS="$(icu-config --ldflags --ldflags-system)"
