@@ -136,8 +136,8 @@ gen_sqlite3_amalgamation() {
   echo "__________________________________"
   echo "Generating SQLite3 amalgamation..."
   echo "----------------------------------"
-  cp "${BASEDIR}/Makefile_d.mingw" "${BUILDDIR}/"
-  make -C "${BUILDDIR}" -f Makefile_d.mingw all_sqlite3
+  cp "${BASEDIR}/Makefile.mingw" "${BUILDDIR}/"
+  make -C "${BUILDDIR}" -f Makefile.mingw all_sqlite3
 
   return 0
 }  
@@ -166,7 +166,7 @@ build_odbc() {
   echo "==============================="
   echo "Building ODBC drivers and utils"
   echo "==============================="
-  make -C "${BASEDIR}" -f Makefile_d.mingw all
+  make -C "${BASEDIR}" -f Makefile.mingw all
 
   return 0
 }
@@ -181,7 +181,7 @@ make_nsis() {
   IFS=$' \n\t'
   ADD_NSIS=(${ADD_NSIS})
   IFS=$'\n\t'
-  makensis ${ADD_NSIS[@]} sqliteodbc.nsi  
+  makensis ${ADD_NSIS[@]} sqliteodbc_w32w64.nsi
   return 0
 }
 

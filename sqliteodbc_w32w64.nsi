@@ -107,6 +107,9 @@ Section "-Main (required)" InstallationInfo
 !ifdef WITH_SQLITE_DLLS
  File "sqlite3.dll"
 !endif
+!ifdef WITH_ICU
+ File /nonfatal lib*.dll
+!endif
 
 ; Shortcuts
  SetOutPath "$SMPROGRAMS\${PROD_NAME0}"

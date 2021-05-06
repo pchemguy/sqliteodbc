@@ -66,9 +66,7 @@ static int nosys = 0;
  * @param quiet when true suppress message box
  */
 
-static BOOL
-ProcessErrorMessages(char *name, int quiet)
-{
+static BOOL ProcessErrorMessages(char *name, int quiet) {
     WORD err = 1;
     DWORD code;
     char errmsg[301];
@@ -77,16 +75,16 @@ ProcessErrorMessages(char *name, int quiet)
     BOOL ret = FALSE;
 
     do {
-	errmsg[0] = '\0';
-	rc = SQLInstallerError(err, &code, errmsg, errmax, &errlen);
-	if (rc == SQL_SUCCESS || rc == SQL_SUCCESS_WITH_INFO) {
-	    if (!quiet) {
-		MessageBox(NULL, errmsg, name,
-			   MB_ICONSTOP|MB_OK|MB_TASKMODAL|MB_SETFOREGROUND);
-	    }
-	    ret = TRUE;
-	}
-	err++;
+        errmsg[0] = '\0';
+        rc = SQLInstallerError(err, &code, errmsg, errmax, &errlen);
+        if (rc == SQL_SUCCESS || rc == SQL_SUCCESS_WITH_INFO) {
+            if (!quiet) {
+                MessageBox(NULL, errmsg, name,
+                           MB_ICONSTOP|MB_OK|MB_TASKMODAL|MB_SETFOREGROUND);
+            }
+            ret = TRUE;
+        }
+        err++;
     } while (rc != SQL_NO_DATA);
     return ret;
 }
@@ -98,45 +96,45 @@ ProcessErrorMessages(char *name, int quiet)
  * @param del flag, when true, delete DLLs in install directory
  */
 
-static BOOL
-CopyOrDelModules(char *dllname, char *path, BOOL del)
-{
+static BOOL CopyOrDelModules(char *dllname, char *path, BOOL del) {
     char firstpat[MAX_PATH];
     WIN32_FIND_DATA fdata;
     HANDLE h;
     DWORD err;
 
     if (strncmp(dllname, "sqlite3", 7)) {
-	return TRUE;
+        return TRUE;
     }
     firstpat[0] = '\0';
     if (del) {
-	strcpy(firstpat, path);
-	strcat(firstpat, "\\");
+        strcpy(firstpat, path);
+        strcat(firstpat, "\\");
     }
-    strcat(firstpat, "sqlite3_mod*.dll");
+//    strcat(firstpat, "sqlite3_mod*.dll");
+    strcat(firstpat, "lib*.dll");
     h = FindFirstFile(firstpat, &fdata);
     if (h == INVALID_HANDLE_VALUE) {
-	return TRUE;
+        return TRUE;
     }
     do {
-	if (del) {
-	    DeleteFile(fdata.cFileName);
-	} else {
-	    char buf[1024];
+        if (del) {
+            DeleteFile(fdata.cFileName);
+        } else {
+            char buf[1024];
 
-	    sprintf(buf, "%s\\%s", path, fdata.cFileName);
-	    if (!CopyFile(fdata.cFileName, buf, 0)) {
-		sprintf(buf, "Copy %s to %s failed", fdata.cFileName, path);
-		MessageBox(NULL, buf, "CopyFile",
-			   MB_ICONSTOP|MB_OK|MB_TASKMODAL|MB_SETFOREGROUND);
-		FindClose(h);
-		return FALSE;
-	    }
-	}
+            sprintf(buf, "%s\\%s", path, fdata.cFileName);
+            if (!CopyFile(fdata.cFileName, buf, 0)) {
+                sprintf(buf, "Copy %s to %s failed", fdata.cFileName, path);
+                MessageBox(NULL, buf, "CopyFile",
+                           MB_ICONSTOP|MB_OK|MB_TASKMODAL|MB_SETFOREGROUND);
+                FindClose(h);
+                return FALSE;
+            }
+        }
     } while (FindNextFile(h, &fdata));
     err = GetLastError();
     FindClose(h);
+
     return err == ERROR_NO_MORE_FILES;
 }
 
@@ -149,140 +147,138 @@ CopyOrDelModules(char *dllname, char *path, BOOL del)
  * @param dsname name for data source
  */
 
-static BOOL
-InUn(int remove, char *drivername, char *dllname, char *dll2name, char *dsname)
-{
+static BOOL InUn(int remove, char *drivername, char *dllname, char *dll2name, char *dsname) {
     char path[301], driver[300], attr[300], inst[400], inst2[400];
     WORD pathmax = sizeof (path) - 1, pathlen;
     DWORD usecnt, mincnt;
 
     if (SQLInstallDriverManager(path, pathmax, &pathlen)) {
-	char *p;
+        char *p;
 
-	sprintf(driver, "%s;Driver=%s;Setup=%s;",
-		drivername, dllname, dllname);
-	p = driver;
-	while (*p) {
-	    if (*p == ';') {
-		*p = '\0';
-	    }
-	    ++p;
-	}
-	usecnt = 0;
-	SQLInstallDriverEx(driver, NULL, path, pathmax, &pathlen,
-			   ODBC_INSTALL_INQUIRY, &usecnt);
-	sprintf(driver, "%s;Driver=%s\\%s;Setup=%s\\%s;",
-		drivername, path, dllname, path, dllname);
-	p = driver;
-	while (*p) {
-	    if (*p == ';') {
-		*p = '\0';
-	    }
-	    ++p;
-	}
-	sprintf(inst, "%s\\%s", path, dllname);
-	if (dll2name) {
-	    sprintf(inst2, "%s\\%s", path, dll2name);
-	}
-	if (!remove && usecnt > 0) {
-	    /* first install try: copy over driver dll, keeping DSNs */
-	    if (GetFileAttributes(dllname) != INVALID_FILE_ATTRIBUTES &&
-		CopyFile(dllname, inst, 0) &&
-		CopyOrDelModules(dllname, path, 0)) {
-		if (dll2name != NULL) {
-		    CopyFile(dll2name, inst2, 0);
-		}
-		return TRUE;
-	    }
-	}
-	mincnt = remove ? 1 : 0;
-	while (usecnt != mincnt) {
-	    if (!SQLRemoveDriver(driver, TRUE, &usecnt)) {
-		break;
-	    }
-	}
-	if (remove) {
-	    if (!SQLRemoveDriver(driver, TRUE, &usecnt)) {
-		if (GetFileAttributes(dllname) != INVALID_FILE_ATTRIBUTES) {
-		    ProcessErrorMessages("SQLRemoveDriver", 0);
-		    return FALSE;
-		}
-		ProcessErrorMessages("SQLRemoveDriver", 1);
-		usecnt = 1;
-	    }
-	    if (!usecnt) {
-		char buf[512];
+        sprintf(driver, "%s;Driver=%s;Setup=%s;",
+                drivername, dllname, dllname);
+        p = driver;
+        while (*p) {
+            if (*p == ';') {
+                *p = '\0';
+            }
+            ++p;
+        }
+        usecnt = 0;
+        SQLInstallDriverEx(driver, NULL, path, pathmax, &pathlen,
+                           ODBC_INSTALL_INQUIRY, &usecnt);
+        sprintf(driver, "%s;Driver=%s\\%s;Setup=%s\\%s;",
+                drivername, path, dllname, path, dllname);
+        p = driver;
+        while (*p) {
+            if (*p == ';') {
+                *p = '\0';
+            }
+            ++p;
+        }
+        sprintf(inst, "%s\\%s", path, dllname);
+        if (dll2name) {
+            sprintf(inst2, "%s\\%s", path, dll2name);
+        }
+        if (!remove && usecnt > 0) {
+            /* first install try: copy over driver dll, keeping DSNs */
+            if (GetFileAttributes(dllname) != INVALID_FILE_ATTRIBUTES &&
+                CopyFile(dllname, inst, 0) &&
+                CopyOrDelModules(dllname, path, 0)) {
+                if (dll2name != NULL) {
+                    CopyFile(dll2name, inst2, 0);
+                }
+                return TRUE;
+            }
+        }
+        mincnt = remove ? 1 : 0;
+        while (usecnt != mincnt) {
+            if (!SQLRemoveDriver(driver, TRUE, &usecnt)) {
+                break;
+            }
+        }
+        if (remove) {
+            if (!SQLRemoveDriver(driver, TRUE, &usecnt)) {
+                if (GetFileAttributes(dllname) != INVALID_FILE_ATTRIBUTES) {
+                    ProcessErrorMessages("SQLRemoveDriver", 0);
+                    return FALSE;
+                }
+                ProcessErrorMessages("SQLRemoveDriver", 1);
+                usecnt = 1;
+            }
+            if (!usecnt) {
+                char buf[512];
 
-		DeleteFile(inst);
-		/* but keep inst2 */
-		CopyOrDelModules(dllname, path, 1);
-		if (!quiet) {
-		    sprintf(buf, "%s uninstalled.", drivername);
-		    MessageBox(NULL, buf, "Info",
-			       MB_ICONINFORMATION|MB_OK|MB_TASKMODAL|
-			       MB_SETFOREGROUND);
-		}
-	    }
-	    if (nosys) {
-		goto done;
-	    }
-	    sprintf(attr, "DSN=%s;Database=", dsname);
-	    p = attr;
-	    while (*p) {
-		if (*p == ';') {
-		    *p = '\0';
-		}
-		++p;
-	    }
-	    SQLConfigDataSource(NULL, ODBC_REMOVE_SYS_DSN, drivername, attr);
-	    goto done;
-	}
-	if (GetFileAttributes(dllname) == INVALID_FILE_ATTRIBUTES) {
-	    return FALSE;
-	}
-	if (!CopyFile(dllname, inst, 0)) {
-	    char buf[512];
+                DeleteFile(inst);
+                /* but keep inst2 */
+                CopyOrDelModules(dllname, path, 1);
+                if (!quiet) {
+                    sprintf(buf, "%s uninstalled.", drivername);
+                    MessageBox(NULL, buf, "Info",
+                               MB_ICONINFORMATION|MB_OK|MB_TASKMODAL|
+                               MB_SETFOREGROUND);
+                }
+            }
+            if (nosys) {
+                goto done;
+            }
+            sprintf(attr, "DSN=%s;Database=", dsname);
+            p = attr;
+            while (*p) {
+                if (*p == ';') {
+                    *p = '\0';
+                }
+                ++p;
+            }
+            SQLConfigDataSource(NULL, ODBC_REMOVE_SYS_DSN, drivername, attr);
+            goto done;
+        }
+        if (GetFileAttributes(dllname) == INVALID_FILE_ATTRIBUTES) {
+            return FALSE;
+        }
+        if (!CopyFile(dllname, inst, 0)) {
+            char buf[512];
 
-	    sprintf(buf, "Copy %s to %s failed", dllname, inst);
-	    MessageBox(NULL, buf, "CopyFile",
-		       MB_ICONSTOP|MB_OK|MB_TASKMODAL|MB_SETFOREGROUND);
-	    return FALSE;
-	}
-	if (dll2name != NULL && !CopyFile(dll2name, inst2, 0)) {
-	    char buf[512];
+            sprintf(buf, "Copy %s to %s failed", dllname, inst);
+            MessageBox(NULL, buf, "CopyFile",
+                       MB_ICONSTOP|MB_OK|MB_TASKMODAL|MB_SETFOREGROUND);
+            return FALSE;
+        }
+        if (dll2name != NULL && !CopyFile(dll2name, inst2, 0)) {
+            char buf[512];
 
-	    sprintf(buf, "Copy %s to %s failed", dll2name, inst2);
-	    MessageBox(NULL, buf, "CopyFile",
-		       MB_ICONSTOP|MB_OK|MB_TASKMODAL|MB_SETFOREGROUND);
-	    /* but go on hoping that an SQLite engine is in place */
-	}
-	if (!CopyOrDelModules(dllname, path, 0)) {
-	    return FALSE;
-	}
-	if (!SQLInstallDriverEx(driver, path, path, pathmax, &pathlen,
-				ODBC_INSTALL_COMPLETE, &usecnt)) {
-	    ProcessErrorMessages("SQLInstallDriverEx", 0);
-	    return FALSE;
-	}
-	if (nosys) {
-	    goto done;
-	}
-	sprintf(attr, "DSN=%s;Database=;", dsname);
-	p = attr;
-	while (*p) {
-	    if (*p == ';') {
-		*p = '\0';
-	    }
-	    ++p;
-	}
-	SQLConfigDataSource(NULL, ODBC_REMOVE_SYS_DSN, drivername, attr);
-	if (!SQLConfigDataSource(NULL, ODBC_ADD_SYS_DSN, drivername, attr)) {
-	    ProcessErrorMessages("SQLConfigDataSource", 0);
-	    return FALSE;
-	}
+            sprintf(buf, "Copy %s to %s failed", dll2name, inst2);
+            MessageBox(NULL, buf, "CopyFile",
+                       MB_ICONSTOP|MB_OK|MB_TASKMODAL|MB_SETFOREGROUND);
+            /* but go on hoping that an SQLite engine is in place */
+        }
+        if (!CopyOrDelModules(dllname, path, 0)) {
+            return FALSE;
+        }
+        if (!SQLInstallDriverEx(driver, path, path, pathmax, &pathlen,
+                                ODBC_INSTALL_COMPLETE, &usecnt)) {
+            ProcessErrorMessages("SQLInstallDriverEx", 0);
+            return FALSE;
+        }
+        if (nosys) {
+            goto done;
+        }
+        sprintf(attr, "DSN=%s;Database=;", dsname);
+        p = attr;
+        while (*p) {
+            if (*p == ';') {
+                *p = '\0';
+            }
+            ++p;
+        }
+        SQLConfigDataSource(NULL, ODBC_REMOVE_SYS_DSN, drivername, attr);
+        if (!SQLConfigDataSource(NULL, ODBC_ADD_SYS_DSN, drivername, attr)) {
+            ProcessErrorMessages("SQLConfigDataSource", 0);
+            return FALSE;
+        }
     } else {
-	ProcessErrorMessages("SQLInstallDriverManager", 0);
-	return FALSE;
+        ProcessErrorMessages("SQLInstallDriverManager", 0);
+        return FALSE;
     }
 done:
     return TRUE;
@@ -295,10 +291,8 @@ done:
  * copies the driver DLL(s) to the system folder.
  */
 
-int APIENTRY
-WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
-	LPSTR lpszCmdLine, int nCmdShow)
-{
+int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+        LPSTR lpszCmdLine, int nCmdShow) {
     char path[300], *p;
     int i, remove;
     BOOL ret[NUMDRVS];
@@ -306,36 +300,36 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     GetModuleFileName(NULL, path, sizeof (path));
     p = path;
     while (*p) {
-	*p = tolower(*p);
-	++p;
+        *p = tolower(*p);
+        ++p;
     }
     p = strrchr(path, '\\');
     if (p == NULL) {
-	p = path;
+        p = path;
     } else {
-	*p = '\0';
-	++p;
-	SetCurrentDirectory(path);
+        *p = '\0';
+        ++p;
+        SetCurrentDirectory(path);
     }
     remove = strstr(p, "uninst") != NULL;
     quiet = strstr(p, "instq") != NULL;
     nosys = strstr(p, "nosys") != NULL;
     for (i = 0; i < NUMDRVS; i++) {
 #ifdef WITH_SQLITE_DLLS
-	p = EngineDLL[i];
+        p = EngineDLL[i];
 #else
-	p = NULL;
+        p = NULL;
 #endif
-	ret[i] = InUn(remove, DriverName[i], DriverDLL[i], p, DSName[i]);
+        ret[i] = InUn(remove, DriverName[i], DriverDLL[i], p, DSName[i]);
     }
     for (i = 1; i < NUMDRVS; i++) {
-	ret[0] = ret[0] || ret[i];
+        ret[0] = ret[0] || ret[i];
     }
     if (!remove && ret[0]) {
-	if (!quiet) {
-	    MessageBox(NULL, "SQLite ODBC Driver(s) installed.", "Info",
-		       MB_ICONINFORMATION|MB_OK|MB_TASKMODAL|MB_SETFOREGROUND);
-	}
+        if (!quiet) {
+            MessageBox(NULL, "SQLite ODBC Driver(s) installed.", "Info",
+                       MB_ICONINFORMATION|MB_OK|MB_TASKMODAL|MB_SETFOREGROUND);
+        }
     }
     exit(0);
 }
