@@ -14,6 +14,13 @@
 ; -------------------------------
 ; Start
 
+
+!if "$%MSYSTEM%" == "MINGW32"
+    !define WinBitType 32
+!else
+    !define WinBitType 64
+!endif
+
 BrandingText " "
 !ifdef WITH_SEE
 Name "SQLite ODBC Driver (SEE)"
@@ -22,11 +29,11 @@ Name "SQLite ODBC Driver"
 !endif
 
 !ifdef WITH_SEE
-!define PROD_NAME  "SQLite ODBC Driver (SEE)"
-!define PROD_NAME0 "SQLite ODBC Driver (SEE)"
+!define PROD_NAME  "SQLite ODBC Driver (SEE) for Win${WinBitType}"
+!define PROD_NAME0 "SQLite ODBC Driver (SEE) for Win${WinBitType}"
 !else
-!define PROD_NAME  "SQLite ODBC Driver"
-!define PROD_NAME0 "SQLite ODBC Driver"
+!define PROD_NAME  "SQLite ODBC Driver for Win${WinBitType}"
+!define PROD_NAME0 "SQLite ODBC Driver for Win${WinBitType}"
 !endif
 CRCCheck On
 !include "MUI.nsh"
@@ -40,14 +47,14 @@ OutFile "sqliteodbc.exe"
 ;--------------------------------
 ; Folder selection page
  
-InstallDir "$PROGRAMFILES\${PROD_NAME0}"
+InstallDir "$PROGRAMFILES${WinBitType}\${PROD_NAME0}"
  
 ;--------------------------------
 ; Modern UI Configuration
 
 !define MUI_ICON "sqliteodbc.ico"
 !define MUI_UNICON "sqliteodbc.ico" 
-!define MUI_WELCOMEPAGE_TITLE "SQLite ODBC Installation"
+!define MUI_WELCOMEPAGE_TITLE "SQLite ODBC for Win${WinBitType} Installation"
 !define MUI_WELCOMEPAGE_TEXT "This program will guide you through the \
 installation of SQLite ODBC Driver.\r\n\r\n$_CLICK"
 !insertmacro MUI_PAGE_WELCOME
@@ -58,7 +65,7 @@ installation of SQLite ODBC Driver.\r\n\r\n$_CLICK"
 !endif
 !insertmacro MUI_PAGE_INSTFILES
 
-!define MUI_FINISHPAGE_TITLE "SQLite ODBC Installation"  
+!define MUI_FINISHPAGE_TITLE "SQLite ODBC for Win${WinBitType} Installation"  
 !define MUI_FINISHPAGE_TEXT "The installation of SQLite ODBC Driver is complete.\
 \r\n\r\n$_CLICK"
 
@@ -83,12 +90,6 @@ Section "-Main (required)" InstallationInfo
  File "sqlite3odbc${WITH_SEE}.dll"
 !else
  File "sqlite3odbc.dll"
-!endif
-; unsupported non-WCHAR driver for SQLite3
-!ifdef WITH_SEE
- File "sqlite3odbc${WITH_SEE}nw.dll"
-!else
- File "sqlite3odbcnw.dll"
 !endif
 !ifndef WITHOUT_SQLITE3_EXE
  File "sqlite3.exe"
