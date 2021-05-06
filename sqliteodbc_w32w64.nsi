@@ -23,18 +23,14 @@
 
 BrandingText " "
 !ifdef WITH_SEE
-Name "SQLite ODBC Driver (SEE)"
+  !define SOFT_NAME "SQLite ODBC Driver (SEE)"
 !else
-Name "SQLite ODBC Driver"
+  !define SOFT_NAME "SQLite ODBC Driver"
 !endif
+Name "${SOFT_NAME}"
 
-!ifdef WITH_SEE
-!define PROD_NAME  "SQLite ODBC Driver (SEE) for Win${WinBitType}"
-!define PROD_NAME0 "SQLite ODBC Driver (SEE) for Win${WinBitType}"
-!else
-!define PROD_NAME  "SQLite ODBC Driver for Win${WinBitType}"
-!define PROD_NAME0 "SQLite ODBC Driver for Win${WinBitType}"
-!endif
+!define PROD_NAME  "${SOFT_NAME} for Win${WinBitType}"
+!define PROD_NAME0 "${PROD_NAME}"
 CRCCheck On
 !include "MUI.nsh"
 !include "Sections.nsh"
@@ -47,7 +43,7 @@ OutFile "sqliteodbc_w${WinBitType}.exe"
 ;--------------------------------
 ; Folder selection page
  
-InstallDir "$PROGRAMFILES${WinBitType}\${PROD_NAME0}"
+InstallDir "$PROGRAMFILES${WinBitType}\${SOFT_NAME}"
  
 ;--------------------------------
 ; Modern UI Configuration
