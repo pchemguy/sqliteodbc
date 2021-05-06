@@ -42,7 +42,7 @@ CRCCheck On
 ;--------------------------------
 ; General
  
-OutFile "sqliteodbc.exe"
+OutFile "sqliteodbc_w${WinBitType}.exe"
  
 ;--------------------------------
 ; Folder selection page
