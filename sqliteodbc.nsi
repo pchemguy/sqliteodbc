@@ -60,9 +60,6 @@ installation of SQLite ODBC Driver.\r\n\r\n$_CLICK"
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "license.txt"
 !insertmacro MUI_PAGE_DIRECTORY
-!ifndef WITHOUT_TCCEXT
-!insertmacro MUI_PAGE_COMPONENTS
-!endif
 !insertmacro MUI_PAGE_INSTFILES
 
 !define MUI_FINISHPAGE_TITLE "SQLite ODBC for Win${WinBitType} Installation"  
