@@ -25,27 +25,28 @@ BASEDIR="$(dirname "$(realpath "$0")")"
 readonly BASEDIR
 readonly DBDIR="sqlite3"
 readonly BUILDDIR="${BASEDIR}/${DBDIR}/build"
+ADD_CFLAGS="${ADD_CFLAGS:-}"
+ADD_LDFLAGS="${ADD_LDFLAGS:-}"
 
 
 SQLITE_DLLS="${SQLITE_DLLS:-}"
 SQLITE3_DLL="${SQLITE3_DLL:-}"
-ADD_CFLAGS="${ADD_CFLAGS:-}"
 ADD_NSIS="${ADD_NSIS:-}"
 SQLITE3_A10N_O="${SQLITE3_A10N_O:-}"
 sqliteodbc_flags() {
   if [[ "${SQLITE_DLLS}" = "2" ]]; then
-    ADD_CFLAGS="-DWITHOUT_SHELL=1 -DWITH_SQLITE_DLLS=2"
-    ADD_NSIS="${ADD_NSIS} -DWITHOUT_SQLITE3_EXE"
+    ADD_CFLAGS=" -DWITHOUT_SHELL=1 -DWITH_SQLITE_DLLS=2"
+    ADD_NSIS+=" -DWITHOUT_SQLITE3_EXE"
   elif [[ -n "${SQLITE_DLLS}" ]]; then
-    ADD_CFLAGS="-DWITHOUT_SHELL=1 -DWITH_SQLITE_DLLS=1"
-    SQLITE3_DLL="-Lsqlite3 -lsqlite3"
-    ADD_NSIS="${ADD_NSIS} -DWITHOUT_SQLITE3_EXE -DWITH_SQLITE_DLLS"
+    ADD_CFLAGS=" -DWITHOUT_SHELL=1 -DWITH_SQLITE_DLLS=1"
+    SQLITE3_DLL=" -Lsqlite3 -lsqlite3"
+    ADD_NSIS+=" -DWITHOUT_SQLITE3_EXE -DWITH_SQLITE_DLLS"
   else
     SQLITE3_A10N_O="sqlite3a10n.o"
-    ADD_NSIS="${ADD_NSIS} -DWITHOUT_SQLITE3_EXE"
+    ADD_NSIS+=" -DWITHOUT_SQLITE3_EXE"
   fi
 
-  export SQLITE3_A10N_O ADD_CFLAGS SQLITE3_DLL
+  export SQLITE3_A10N_O SQLITE3_DLL
   return 0
 }
 
@@ -74,6 +75,7 @@ get_sqlite() {
 }
 
 
+SQLITE_CFLAGS=""
 configure_sqlite() {
   mkdir -p "${BUILDDIR}"
   cd "${BUILDDIR}" \
@@ -92,6 +94,40 @@ configure_sqlite() {
   	echo "Makefile found. Skipping configuring SQLite3"
     echo "--------------------------------------------"
   fi
+
+  IFS=$' \n\t'
+  SQLITE_CFLAGS=(
+    -D_HAVE_SQLITE_CONFIG_H
+    -DSQLITE_DQS=0
+    -DSQLITE_LIKE_DOESNT_MATCH_BLOBS
+    -DSQLITE_MAX_EXPR_DEPTH=0
+    -DSQLITE_DEFAULT_FOREIGN_KEYS=1
+    -DSQLITE_DEFAULT_SYNCHRONOUS=1
+    -DSQLITE_ENABLE_COLUMN_METADATA
+    -DSQLITE_ENABLE_DBPAGE_VTAB
+    -DSQLITE_ENABLE_DBSTAT_VTAB
+    -DSQLITE_ENABLE_EXPLAIN_COMMENTS
+    -DSQLITE_ENABLE_FTS3
+    -DSQLITE_ENABLE_FTS3_PARENTHESIS
+    -DSQLITE_ENABLE_FTS3_TOKENIZER
+    -DSQLITE_ENABLE_FTS4
+    -DSQLITE_ENABLE_FTS5
+    -DSQLITE_ENABLE_GEOPOLY
+    -DSQLITE_ENABLE_MATH_FUNCTIONS
+    -DSQLITE_ENABLE_JSON1
+    -DSQLITE_ENABLE_QPSG
+    -DSQLITE_ENABLE_RBU
+    -DSQLITE_ENABLE_ICU
+    -DSQLITE_ENABLE_RTREE
+    -DSQLITE_ENABLE_STMTVTAB
+    -DSQLITE_ENABLE_STAT4
+    -DSQLITE_SOUNDEX
+    -DNDEBUG
+  )
+  IFS=$'\n\t'
+
+  ADD_CFLAGS+=${SQLITE_CFLAGS[@]}
+
   return 0
 }  
 
@@ -137,6 +173,24 @@ extend_amalgamation() {
 }
 
 
+set_icu() {
+  cd "${BASEDIR}"
+  cp "${MINGW_PREFIX}/bin/libicudt68.dll" ./
+  cp "${MINGW_PREFIX}/bin/libicuin68.dll" ./
+  cp "${MINGW_PREFIX}/bin/libicuuc68.dll" ./
+  cp "${MINGW_PREFIX}/bin/libgcc_s_dw2-1.dll" ./
+  cp "${MINGW_PREFIX}/bin/libstdc++-6.dll" ./
+
+  ICU_CFLAGS="$(icu-config --cflags --cppflags)"
+  ICU_LDFLAGS="$(icu-config --ldflags --ldflags-system)"
+  ADD_CFLAGS+=" ${ICU_CFLAGS}"
+  ADD_LDFLAGS+=" ${ICU_LDFLAGS}"
+  ADD_NSIS+=" -DWITH_ICU"
+
+  return 0
+}
+
+
 build_odbc() {
   echo "==============================="
   echo "Building ODBC drivers and utils"
@@ -174,6 +228,8 @@ main() {
   gen_sqlite3_amalgamation
   patch_sqlite3_libshell_c
   extend_amalgamation
+  set_icu
+  export ADD_CFLAGS ADD_LDFLAGS
   build_odbc
   make_nsis
 
