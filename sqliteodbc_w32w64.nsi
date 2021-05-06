@@ -91,7 +91,7 @@ Section "-Main (required)" InstallationInfo
 !ifndef WITHOUT_SQLITE3_EXE
  File "sqlite3.exe"
 !endif
- File "inst.exe"
+ File "insta.exe"
  File "instq.exe"
  File "uninst.exe"
  File "uninstq.exe"
@@ -112,18 +112,19 @@ Section "-Main (required)" InstallationInfo
 !endif
 
 ; Shortcuts
- SetOutPath "$SMPROGRAMS\${PROD_NAME0}"
- CreateShortCut "$SMPROGRAMS\${PROD_NAME0}\Re-install ODBC Drivers.lnk" \
-   "$INSTDIR\inst.exe"
- CreateShortCut "$SMPROGRAMS\${PROD_NAME0}\Remove ODBC Drivers.lnk" \
+ !define SMROOT "$SMPROGRAMS\${PROD_NAME0}"
+ SetOutPath "${SMROOT}"
+ CreateShortCut "${SMROOT}\Re-install ODBC Drivers.lnk" \
+   "$INSTDIR\insta.exe"
+ CreateShortCut "${SMROOT}\Remove ODBC Drivers.lnk" \
    "$INSTDIR\uninst.exe"
- CreateShortCut "$SMPROGRAMS\${PROD_NAME0}\Uninstall.lnk" \
+ CreateShortCut "${SMROOT}\Uninstall.lnk" \
    "$INSTDIR\uninstall.exe"
- CreateShortCut "$SMPROGRAMS\${PROD_NAME0}\View README.lnk" \
+ CreateShortCut "${SMROOT}\View README.lnk" \
    "$INSTDIR\readme.txt"
- SetOutPath "$SMPROGRAMS\${PROD_NAME0}\Shells"
+ SetOutPath "${SMROOT}\Shells"
 !ifndef WITHOUT_SQLITE3_EXE
- CreateShortCut "$SMPROGRAMS\${PROD_NAME0}\Shells\SQLite 3.lnk" \
+ CreateShortCut "${SMROOT}\Shells\SQLite 3.lnk" \
    "$INSTDIR\sqlite3.exe"
 !endif
  

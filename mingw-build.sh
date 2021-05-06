@@ -188,9 +188,11 @@ make_nsis() {
 
 main() {
   LOG_FILE=${LOG_FILE:-makelog.log}
-  echo "SQLITE_DLLS=${SQLITE_DLLS:-};" "$0" "$@" >>"${LOG_FILE}"
-  echo "###############################################################" >>"${LOG_FILE}"
-  echo "" >>"${LOG_FILE}"
+  { 
+    echo "SQLITE_DLLS=${SQLITE_DLLS:-};" "$0" "$@";
+    echo "###############################################################";
+    echo "";
+  } >>"${LOG_FILE}"
 
   sqliteodbc_flags
   get_sqlite

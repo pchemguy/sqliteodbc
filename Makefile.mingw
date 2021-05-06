@@ -82,7 +82,7 @@ define make_dll
 endef
 
 all: sqlite3odbc$(SEEEXT).dll \
-	inst.exe instq.exe uninst.exe uninstq.exe \
+	insta.exe instq.exe uninst.exe uninstq.exe \
 	adddsn.exe remdsn.exe addsysdsn.exe remsysdsn.exe \
 	SQLiteODBCInstaller.exe $(SQLITE3_EXE)
 
@@ -148,20 +148,22 @@ blobtoxyres.o: blobtoxy.rc resource3.h
 		$(RULES)
 instres.o: inst.rc
 		$(RULES)
+instares.o: instres.o
+		cp $< $@
 		
-adddsn.exe inst.exe: RULES = \
+adddsn.exe insta.exe: RULES = \
         $(CC) $(CFLAGS) $(ADD_CFLAGS) -mwindows $< $(@:.exe=res.o) -o $@ \
             -lodbc32 -lodbccp32 -lkernel32 -luser32; \
         $(STRIP) $@
 adddsn.exe: adddsn.c adddsnres.o
 		$(RULES)
-inst.exe: inst.c instres.o
+insta.exe: insta.c instares.o
 		$(RULES)
 
-instq.exe uninst.exe uninstq.exe: inst.exe
-		cp -p $< $@
+instq.exe uninst.exe uninstq.exe: insta.exe
+		cp $< $@
 remdsn.exe addsysdsn.exe remsysdsn.exe: adddsn.exe
-		cp -p $< $@
+		cp $< $@
 
 SQLiteODBCInstaller.exe: SQLiteODBCInstaller.c sqliteres.o
 		$(CC) $^ $(CFLAGS) $(ADD_CFLAGS) -lkernel32 -luser32 -o $@
