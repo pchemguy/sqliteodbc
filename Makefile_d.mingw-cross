@@ -62,8 +62,8 @@ LOG_FILE ?= makelog.log
 LOG_SECTION_LABEL = >>$(LOG_FILE) echo '_______________________________$@_______________________________'
 LOG_SECTION_SEP   = >>$(LOG_FILE) echo ""
 LOG_SED_SPLIT_CLI = >>$(LOG_FILE) sed -e 's/^[\t]* *//g; s/ +/ /g; s/ -/ \\\n-/g' <<<
-BASE_CC = $(CC) $(CFLAGS) $(ADD_CFLAGS) -I$(SQLITE3_INC)
-BASE_LD = $(CC) $(CFLAGS) -shared $^ -o $@ \
+BASE_CC = $(CC) $(CFLAGS) $(ADD_CFLAGS) -I$(SQLITE3_INC) -I$(SQLITE3_INC)/build
+BASE_LD = $(CC) $(CFLAGS) -shared $^ $(ADD_LDLAGS) -o $@ \
           -Wl,--kill-at -Wl,--strip-all -Wl,--out-implib,lib$(@:.dll=.a) \
           $(LMSVCRT) -lgdi32 -lcomdlg32 -ladvapi32 -lshell32 -luser32 -lkernel32
 
