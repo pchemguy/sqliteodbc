@@ -1,271 +1,153 @@
-#!/bin/sh
-#
-set -euo pipefail
-IFS=$'\n\t'
+# Makefile for SQLite ODBC Drivers
+# using MinGW cross compiler
 
-cleanup_EXIT() { 
-  echo "EXIT clean up: $?" 
-}
-trap cleanup_EXIT EXIT
+MINGW =		
+CC =		$(MINGW)gcc
+STRIP =		$(MINGW)strip
+RC =		$(MINGW)windres -F pe-i386
+MAKENSIS =	makensis
 
-cleanup_TERM() {
-  echo "TERM clean up"
-}
-trap cleanup_TERM TERM
+DRV_VER=	$(shell cat VERSION)
 
-cleanup_ERR() {
-  echo "ERR clean up"
-}
-trap cleanup_ERR ERR
+CFLAGS=		-O2 -Wall -static-libgcc -static-libstdc++ -DNDEBUG=1 -DDRIVER_VER_INFO=\"$(DRV_VER)\"
 
+ifeq ($(MSVCRT),70)
+	CFLAGS += -D__MSVCRT_VERSION=0x0700
+	LMSVCRT = -nodefaultlibs -lmingw32 -lgcc_eh -lmoldname -lmingwex -lgcc -lmsvcr70
+endif
+ifeq ($(MSVCRT),80)
+	CFLAGS += -D__MSVCRT_VERSION=0x0800
+	LMSVCRT = -nodefaultlibs -lmingw32 -lgcc_eh -lmoldname -lmingwex -lgcc -lmsvcr80
+endif
+ifeq ($(MSVCRT),90)
+	CFLAGS += -D__MSVCRT_VERSION=0x0900
+	LMSVCRT = -nodefaultlibs -lmingw32 -lgcc_eh -lmoldname -lmingwex -lgcc -lmsvcr90 -lmsvcrt
+endif
+ifeq ($(MSVCRT),100)
+	CFLAGS += -D__MSVCRT_VERSION=0x0A00
+	LMSVCRT = -nodefaultlibs -lmingw32 -lgcc_eh -lmoldname -lmingwex -lgcc -lmsvcr100 -lmsvcrt
+endif
+ifeq ($(LMSVCRT),)
+	CFLAGS += -D_USE_32BIT_TIME_T=1
+	LMSVCRT = -lmsvcrt
+endif
 
-EXITCODE=0
-EC=0
-BASEDIR="$(dirname "$(realpath "$0")")"
-readonly BASEDIR
-readonly DBDIR="sqlite3"
-readonly BUILDDIR="${BASEDIR}/${DBDIR}/build"
+SQLITE3_INC = sqlite3
+SQLITE3_LIB = sqlite3/libsqlite3.a
+SQLITE3_FLAGS = \
+		-DHAVE_SQLITE3COLUMNTABLENAME=1 \
+		-DHAVE_SQLITE3COLUMNDATABASENAME=1 \
+		-DHAVE_SQLITE3COLUMNORIGINNAME=1 \
+		-DHAVE_SQLITE3LOADEXTENSION=1 \
+		-DHAVE_SQLITE3PREPAREV2=1 \
+		-DHAVE_SQLITE3VFS=1 \
+		-DHAVE_SQLITE3PROFILE=1 \
+		-DHAVE_SQLITE3CLOSEV2=1 \
+		-DHAVE_SQLITE3STRNICMP=1 \
+		-DHAVE_SQLITE3TABLECOLUMNMETADATA=1
+SQLITE3_A10N =	sqlite3/sqlite3.c
+SQLITE3_A10N_FLAGS = \
+		-DWIN32=1 -DNDEBUG=1 -DNO_TCL -DTHREADSAFE=1 \
+		-DSQLITE_ENABLE_COLUMN_METADATA=1 \
+		-DSQLITE_DLL=1 \
+		-DSQLITE_THREADSAFE=1 \
+		-DSQLITE_OS_WIN=1 \
+		-DSQLITE_ASCII=1 \
+		-DSQLITE_SOUNDEX=1
 
+ODBC_FLAGS = -DHAVE_LONG_LONG=1 -DHAVE_SQLROWOFFSET=1
+ODBC_LIB = -lodbc
 
-SQLITE_DLLS="${SQLITE_DLLS:-}"
-SQLITE3_DLL="${SQLITE3_DLL:-}"
-ADD_CFLAGS="${ADD_CFLAGS:-}"
-ADD_NSIS="${ADD_NSIS:-}"
-SQLITE3_A10N_O="${SQLITE3_A10N_O:-}"
-sqliteodbc_flags() {
-  if [[ "${SQLITE_DLLS}" = "2" ]]; then
-    ADD_CFLAGS="-DWITHOUT_SHELL=1 -DWITH_SQLITE_DLLS=2"
-    ADD_NSIS="${ADD_NSIS} -DWITHOUT_SQLITE3_EXE"
-  elif [[ -n "${SQLITE_DLLS}" ]]; then
-    ADD_CFLAGS="-DWITHOUT_SHELL=1 -DWITH_SQLITE_DLLS=1"
-    SQLITE3_DLL="-Lsqlite3 -lsqlite3"
-    ADD_NSIS="${ADD_NSIS} -DWITHOUT_SQLITE3_EXE -DWITH_SQLITE_DLLS"
-  else
-    SQLITE3_A10N_O="sqlite3a10n.o"
-    ADD_NSIS="${ADD_NSIS} -DWITHOUT_SQLITE3_EXE"
-  fi
+LOG_FILE ?= makelog.log
+LOG_SECTION_LABEL = >>$(LOG_FILE) echo '_______________________________$@_______________________________'
+LOG_SECTION_SEP   = >>$(LOG_FILE) echo ""
+LOG_SED_SPLIT_CLI = >>$(LOG_FILE) sed -e 's/^[\t]* *//g; s/ +/ /g; s/ -/ \\\n-/g' <<<
+BASE_CC = $(CC) $(CFLAGS) $(ADD_CFLAGS) -I$(SQLITE3_INC) -I$(SQLITE3_INC)/build
+BASE_LD = $(CC) $(CFLAGS) -shared $^ $(ADD_LDLAGS) -o $@ \
+          -Wl,--kill-at -Wl,--strip-all -Wl,--out-implib,lib$(@:.dll=.a) \
+          $(LMSVCRT) -lgdi32 -lcomdlg32 -ladvapi32 -lshell32 -luser32 -lkernel32
 
-  export SQLITE3_A10N_O ADD_CFLAGS SQLITE3_DLL
-  return 0
-}
+define make_obj
+	$(LOG_SECTION_LABEL); \
+	$(LOG_SED_SPLIT_CLI) '$(CCEX)'; \
+	$(LOG_SECTION_SEP); \
+	$(CCEX)
+endef
 
+define make_dll
+	$(LOG_SECTION_LABEL); \
+	$(LOG_SED_SPLIT_CLI) '$(LDEX)'; \
+	$(LOG_SECTION_SEP); \
+	$(LDEX)
+endef
 
-get_sqlite() {
-  cd "${BASEDIR}" || ( echo "Cannot enter ${BASEDIR}" && exit 101 )
-  local SQLite_URL="https://www.sqlite.org/src/tarball/sqlite.tar.gz?r=release"
-  if [[ ! -f ./sqlite.tar.gz ]]; then
-    echo "____________________________________________"
-  	echo "Downloading the current release of SQLite..."
-    echo "--------------------------------------------"
-    wget -c "${SQLite_URL}" --no-check-certificate -O sqlite.tar.gz \
-      || EC=$?
-    (( EC != 0 )) && echo "Error downloading SQLite ${EC}." && exit 102
-  else
-    echo "________________________________________________"
-  	echo "Using previously downloaded archive of SQLite..."
-    echo "------------------------------------------------"
-  fi
-
-  if [[ ! -f "./${DBDIR}/configure" ]]; then
-    tar xzf ./sqlite.tar.gz
-    mv ./sqlite "${DBDIR}"
-  fi
-  return 0
-}
-
-
-configure_sqlite() {
-  mkdir -p "${BUILDDIR}"
-  cd "${BUILDDIR}" \
-    || ( echo "Cannot enter ${BUILDDIR}" && exit 104 )
-  [[ ! -r ../configure ]] && echo "Error accessing SQLite configure" && exit 105
-
-  if [[ ! -f ./Makefile ]]; then
-    echo "______________________"
-  	echo "Configuring SQLite3..."
-    echo "----------------------"
-    ../configure --enable-fts3 --enable-memsys5 --enable-update-limit \
-      --enable-all --with-tcl="${MINGW_PREFIX}/lib/tcl8" || EXITCODE=$?
-    (( EXITCODE != 0 )) && echo "Error configuring SQLite" && exit 106
-  else
-    echo "____________________________________________"
-  	echo "Makefile found. Skipping configuring SQLite3"
-    echo "--------------------------------------------"
-  fi
-  return 0
-}  
+all: sqlite3odbc$(SEEEXT).dll \
+	inst.exe instq.exe uninst.exe uninstq.exe \
+	adddsn.exe remdsn.exe addsysdsn.exe remsysdsn.exe \
+	SQLiteODBCInstaller.exe $(SQLITE3_EXE)
 
 
-gen_sqlite3_amalgamation() {
-  echo "__________________________________"
-  echo "Generating SQLite3 amalgamation..."
-  echo "----------------------------------"
-  make -C "${BUILDDIR}" sqlite3.c || EXITCODE=$?
-  (( EXITCODE != 0 )) && echo "Error generating SQLite3 amalgamation" && exit 109
-  return 0
-}
+sqlite3a10n.o: CCEX = $(BASE_CC) $(SQLITE3_A10N_FLAGS) -c $(SQLITE3_A10N) -o $@
+sqlite3a10n.o: $(SQLITE3_A10N)
+		$(make_obj)
 
+sqlite3odbc.o: CCEX = $(BASE_CC) $(ODBC_FLAGS) $(SQLITE3_FLAGS) -c $(@:.o=.c) -o $@
+sqlite3odbc.o: sqlite3odbc.c sqlite3odbc.h resource3.h
+		$(make_obj)
 
-patch_sqlite3_libshell_c() {
-  echo "__________________________________________________________________"
-  echo "Adjust names of the entry point and appendText in (lib)shell.c ..."
-  echo "------------------------------------------------------------------"  
-  cp "${BUILDDIR}/shell.c" "${BUILDDIR}/libshell.c" || EXITCODE=$?
-  (( EXITCODE != 0 )) && echo "Error copying <shell.c>." && exit 110
-  sed -e 's/^int SQLITE_CDECL main/int SQLITE_CDECL sqlite3_main/;' \
-      -e 's/appendText/shAppendText/g;' \
-      -i "${BUILDDIR}/libshell.c"
-  return 0
-}
+sqlite3odbc$(SEEEXT).dll: LDEX = $(BASE_LD) -lodbc32 -lodbccp32
+sqlite3odbc$(SEEEXT).dll: sqlite3odbc.o sqlite3odbcres.o $(SQLITE3_A10N_O) $(SQLITE3_DLL)
+		$(make_dll)
+		$(STRIP) $@
 
+sqlite3.exe: sqlite3odbc$(SEEEXT).dll sqlite3/src/minshell.c sqliteres.o
+		$(CC) $(wordlist 2,$(words $^),$^) $(CFLAGS) $(SQLITE3_FLAGS) \
+		    -Isqlite3 -L. -l$(<:.dll=) -o $@ 
+		$(STRIP) $@
 
-extend_amalgamation() {
-  echo "_________________________________"
-  echo "Extending SQLite3 amalgamation..."
-  echo "---------------------------------"
-  cd "${BUILDDIR}/.."
-  echo "/************************** Begin config.h ********************************/" >./sqlite3.c
-  cat "${BUILDDIR}/config.h" >>./sqlite3.c
-  echo "/************************** End config.h **********************************/" >>./sqlite3.c
-  echo "/************************** Begin sqlite3.c *******************************/" >>./sqlite3.c
-  cat "${BUILDDIR}/sqlite3.c" >>./sqlite3.c
-  echo "/************************** Begin libshell.c ******************************/" >>./sqlite3.c
-  cat "${BUILDDIR}/libshell.c" >>./sqlite3.c
-  echo "/************************** End libshell.c ********************************/" >>./sqlite3.c
+resource3.h:resource.h.in
+		VERS=`cat VERSION` ;\
+		VERS_C=`echo $$VERS | sed -e 's/\([0-9]\+\)[.]\([0-9]\+\).*/\1,\2/g'` ;\
+		sed -e 's/--VERS_C--/'$$VERS_C'/g' < resource.h.in | \
+		sed -e 's/--VERS--/'$$VERS'/g' > resource3.h
 
-  return 0
-}
+sqliteres.rc:
+		@echo "ico ICON sqlite.ico" > sqliteres.rc
 
+RES_O = sqliteres.o sqlite3odbcres.o adddsnres.o blobtoxyres.o instres.o
+$(RES_O): RULES = $(RC) -I$(SQLITE3_INC) $< -o $@
+sqlite3odbcres.o: sqlite3odbc.rc resource3.h
+		$(RULES)
+sqliteres.o: sqliteres.rc
+		$(RULES)
+adddsnres.o: adddsn.rc
+		$(RULES)
+blobtoxyres.o: blobtoxy.rc resource3.h
+		$(RULES)
+instres.o: inst.rc
+		$(RULES)
+		
+adddsn.exe inst.exe: RULES = \
+        $(CC) $(CFLAGS) $(ADD_CFLAGS) -mwindows $< $(@:.exe=res.o) -o $@ \
+            -lodbc32 -lodbccp32 -lkernel32 -luser32; \
+        $(STRIP) $@
+adddsn.exe: adddsn.c adddsnres.o
+		$(RULES)
+inst.exe: inst.c instres.o
+		$(RULES)
 
-build_odbc() {
-  echo "==============================="
-  echo "Building ODBC drivers and utils"
-  echo "==============================="
-  make -C "${BASEDIR}" -f Makefile_d.mingw-cross all
+instq.exe uninst.exe uninstq.exe: inst.exe
+		cp -p $< $@
+remdsn.exe addsysdsn.exe remsysdsn.exe: adddsn.exe
+		cp -p $< $@
 
-  return 0
-}
+SQLiteODBCInstaller.exe: SQLiteODBCInstaller.c sqliteres.o
+		$(CC) $^ $(CFLAGS) $(ADD_CFLAGS) -lkernel32 -luser32 -o $@
+		$(STRIP) $@
 
-
-make_nsis() {
-  echo "==========================="
-  echo "Creating NSIS installer ..."
-  echo "==========================="
-  cd "${BASEDIR}"
-  cp README readme.txt && cp license.terms license.txt || EXITCODE=$?
-  (( EXITCODE != 0 )) && echo "Error copying nsis files." && exit 110
-  IFS=$' \n\t'
-  ADD_NSIS=(${ADD_NSIS})
-  IFS=$'\n\t'
-  makensis ${ADD_NSIS[@]} sqliteodbc.nsi  
-  return 0
-}
-
-
-main() {
-  LOG_FILE=${LOG_FILE:-makelog.log}
-  echo "SQLITE_DLLS=${SQLITE_DLLS:-};" "$0" "$@" >>"${LOG_FILE}"
-  echo "###############################################################" >>"${LOG_FILE}"
-  echo "" >>"${LOG_FILE}"
-
-  sqliteodbc_flags
-  get_sqlite
-  configure_sqlite
-  gen_sqlite3_amalgamation
-  patch_sqlite3_libshell_c
-  extend_amalgamation
-  build_odbc
-  make_nsis
-
-  return 0
-}
-
-
-main "$@"
-
-exit 0
-
-
-
-
-
-
-
-#-DSQLITE_ENABLE_ICU \
-
-
-#make -f ../../mf-sqlite3.mingw32 exe
-
-#sqlite3.c
-#make "OPTS=$FEATURES $CFLAGS" dll
-
-echo "=================================================="
-exit
-
-
-
-#VER=`sqlite3 -version | awk '{split($0, ver, " "); split(ver[1], v, "."); print(v[1] v[2] "0" v[3] "00")}'`
-#wget -c https://sqlite.org/2021/sqlite-amalgamation-${VER}.zip \
-#      --no-check-certificate -O sqlite3.zip
-#rm -rf sqlite3
-#rm -rf sqlite-amalgamation-${VER}
-#unzip sqlite3.zip
-#mv "sqlite-amalgamation-${VER}" sqlite3
-
-#echo "======================================================="
-#echo "Append shell.c entry point declaration to sqlite3.h ..."
-#echo "======================================================="
-#
-#cat >>sqlite3/sqlite3.h <<'EOD'
-#/************** Begin of libshell.h *************************************/
-##ifndef LIBSHELL_H
-##define LIBSHELL_H
-#  
-#int sqlite3_main(int argc, char **argv);
-#
-##endif /* LIBSHELL_H */
-#/************** End of libshell.h ***************************************/
-#EOD
-
-
-#echo "============================================================="
-#echo "Adjust names of the entry point and appendText in shell.c ..."
-#echo "============================================================="
-#
-#sed -e 's/^int SQLITE_CDECL main/int SQLITE_CDECL sqlite3_main/;' \
-#    -e 's/appendText/shAppendText/g;' \
-#    -i ./sqlite3/shell.c
-#  OPT_FEATURE_FLAGS=" \
-#  -DSQLITE_DQS=0 \
-#  -DSQLITE_LIKE_DOESNT_MATCH_BLOBS \
-#  -DSQLITE_MAX_EXPR_DEPTH=0 \
-#  -DSQLITE_OMIT_DEPRECATED \
-#  -DSQLITE_DEFAULT_FOREIGN_KEYS=1 \
-#  -DSQLITE_DEFAULT_SYNCHRONOUS=1 \
-#  -DSQLITE_ENABLE_COLUMN_METADATA \
-#  -DSQLITE_ENABLE_DBPAGE_VTAB \
-#  -DSQLITE_ENABLE_DBSTAT_VTAB \
-#  -DSQLITE_ENABLE_EXPLAIN_COMMENTS \
-#  -DSQLITE_ENABLE_FTS3_PARENTHESIS \
-#  -DSQLITE_ENABLE_FTS3_TOKENIZER \
-#  -DSQLITE_ENABLE_QPSG \
-#  -DSQLITE_ENABLE_RBU \
-#  -DSQLITE_ENABLE_STMTVTAB \
-#  -DSQLITE_ENABLE_STAT4 \
-#  -DSQLITE_SOUNDEX \
-#  -DSQLITE_ENABLE_OFFSET_SQL_FUNC\
-#  "
-#  
-#  CFLAGS=" \
-#  -static-libgcc \
-#  -static-libstdc++ \
-#  "
-#  export CFLAGS OPT_FEATURE_FLAGS
-#
-#
-exit
-echo "==============================="
-echo "Building ODBC drivers and utils"
-echo "==============================="
-make -f Makefile.mingw32 all_no2
+clean:
+		rm -f *.o sqliteodbc*.dll sqlite3odbc$(SEEEXT).dll \
+		    *inst.exe *dsn.exe sqlite*.exe sqliteres.rc *~ \
+		    core core.*
+		rm -f resource.h resource3.h
 
