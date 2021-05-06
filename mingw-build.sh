@@ -136,41 +136,11 @@ gen_sqlite3_amalgamation() {
   echo "__________________________________"
   echo "Generating SQLite3 amalgamation..."
   echo "----------------------------------"
-  make -C "${BUILDDIR}" sqlite3.c || EXITCODE=$?
-  (( EXITCODE != 0 )) && echo "Error generating SQLite3 amalgamation" && exit 109
-  return 0
-}
-
-
-patch_sqlite3_libshell_c() {
-  echo "__________________________________________________________________"
-  echo "Adjust names of the entry point and appendText in (lib)shell.c ..."
-  echo "------------------------------------------------------------------"  
-  cp "${BUILDDIR}/shell.c" "${BUILDDIR}/libshell.c" || EXITCODE=$?
-  (( EXITCODE != 0 )) && echo "Error copying <shell.c>." && exit 110
-  sed -e 's/^int SQLITE_CDECL main/int SQLITE_CDECL sqlite3_main/;' \
-      -e 's/appendText/shAppendText/g;' \
-      -i "${BUILDDIR}/libshell.c"
-  return 0
-}
-
-
-extend_amalgamation() {
-  echo "_________________________________"
-  echo "Extending SQLite3 amalgamation..."
-  echo "---------------------------------"
-  cd "${BUILDDIR}/.."
-  echo "/************************** Begin config.h ********************************/" >./sqlite3.c
-  cat "${BUILDDIR}/config.h" >>./sqlite3.c
-  echo "/************************** End config.h **********************************/" >>./sqlite3.c
-  echo "/************************** Begin sqlite3.c *******************************/" >>./sqlite3.c
-  cat "${BUILDDIR}/sqlite3.c" >>./sqlite3.c
-  echo "/************************** Begin libshell.c ******************************/" >>./sqlite3.c
-  cat "${BUILDDIR}/libshell.c" >>./sqlite3.c
-  echo "/************************** End libshell.c ********************************/" >>./sqlite3.c
+  cp "${BASEDIR}/Makefile_d.mingw" "${BUILDDIR}/"
+  make -C "${BUILDDIR}" -f Makefile_d.mingw all_sqlite3
 
   return 0
-}
+}  
 
 
 set_icu() {
@@ -178,6 +148,7 @@ set_icu() {
   cp "${MINGW_PREFIX}/bin/libicudt68.dll" ./
   cp "${MINGW_PREFIX}/bin/libicuin68.dll" ./
   cp "${MINGW_PREFIX}/bin/libicuuc68.dll" ./
+  cp "${MINGW_PREFIX}/bin/libwinpthread-1.dll" ./
   cp "${MINGW_PREFIX}/bin/libgcc_s_dw2-1.dll" ./
   cp "${MINGW_PREFIX}/bin/libstdc++-6.dll" ./
 
@@ -206,8 +177,7 @@ make_nsis() {
   echo "Creating NSIS installer ..."
   echo "==========================="
   cd "${BASEDIR}"
-  cp README readme.txt && cp license.terms license.txt || EXITCODE=$?
-  (( EXITCODE != 0 )) && echo "Error copying nsis files." && exit 110
+  cp README readme.txt && cp license.terms license.txt
   IFS=$' \n\t'
   ADD_NSIS=(${ADD_NSIS})
   IFS=$'\n\t'
@@ -226,8 +196,6 @@ main() {
   get_sqlite
   configure_sqlite
   gen_sqlite3_amalgamation
-  patch_sqlite3_libshell_c
-  extend_amalgamation
   set_icu
   export ADD_CFLAGS ADD_LDFLAGS
   build_odbc
@@ -240,88 +208,3 @@ main() {
 main "$@"
 
 exit 0
-
-
-
-
-
-
-
-#-DSQLITE_ENABLE_ICU \
-
-
-#make -f ../../mf-sqlite3.mingw32 exe
-
-#sqlite3.c
-#make "OPTS=$FEATURES $CFLAGS" dll
-
-echo "=================================================="
-exit
-
-
-
-#VER=`sqlite3 -version | awk '{split($0, ver, " "); split(ver[1], v, "."); print(v[1] v[2] "0" v[3] "00")}'`
-#wget -c https://sqlite.org/2021/sqlite-amalgamation-${VER}.zip \
-#      --no-check-certificate -O sqlite3.zip
-#rm -rf sqlite3
-#rm -rf sqlite-amalgamation-${VER}
-#unzip sqlite3.zip
-#mv "sqlite-amalgamation-${VER}" sqlite3
-
-#echo "======================================================="
-#echo "Append shell.c entry point declaration to sqlite3.h ..."
-#echo "======================================================="
-#
-#cat >>sqlite3/sqlite3.h <<'EOD'
-#/************** Begin of libshell.h *************************************/
-##ifndef LIBSHELL_H
-##define LIBSHELL_H
-#  
-#int sqlite3_main(int argc, char **argv);
-#
-##endif /* LIBSHELL_H */
-#/************** End of libshell.h ***************************************/
-#EOD
-
-
-#echo "============================================================="
-#echo "Adjust names of the entry point and appendText in shell.c ..."
-#echo "============================================================="
-#
-#sed -e 's/^int SQLITE_CDECL main/int SQLITE_CDECL sqlite3_main/;' \
-#    -e 's/appendText/shAppendText/g;' \
-#    -i ./sqlite3/shell.c
-#  OPT_FEATURE_FLAGS=" \
-#  -DSQLITE_DQS=0 \
-#  -DSQLITE_LIKE_DOESNT_MATCH_BLOBS \
-#  -DSQLITE_MAX_EXPR_DEPTH=0 \
-#  -DSQLITE_OMIT_DEPRECATED \
-#  -DSQLITE_DEFAULT_FOREIGN_KEYS=1 \
-#  -DSQLITE_DEFAULT_SYNCHRONOUS=1 \
-#  -DSQLITE_ENABLE_COLUMN_METADATA \
-#  -DSQLITE_ENABLE_DBPAGE_VTAB \
-#  -DSQLITE_ENABLE_DBSTAT_VTAB \
-#  -DSQLITE_ENABLE_EXPLAIN_COMMENTS \
-#  -DSQLITE_ENABLE_FTS3_PARENTHESIS \
-#  -DSQLITE_ENABLE_FTS3_TOKENIZER \
-#  -DSQLITE_ENABLE_QPSG \
-#  -DSQLITE_ENABLE_RBU \
-#  -DSQLITE_ENABLE_STMTVTAB \
-#  -DSQLITE_ENABLE_STAT4 \
-#  -DSQLITE_SOUNDEX \
-#  -DSQLITE_ENABLE_OFFSET_SQL_FUNC\
-#  "
-#  
-#  CFLAGS=" \
-#  -static-libgcc \
-#  -static-libstdc++ \
-#  "
-#  export CFLAGS OPT_FEATURE_FLAGS
-#
-#
-exit
-echo "==============================="
-echo "Building ODBC drivers and utils"
-echo "==============================="
-make -f Makefile.mingw32 all_no2
-

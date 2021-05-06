@@ -63,7 +63,7 @@ LOG_SECTION_LABEL = >>$(LOG_FILE) echo '_______________________________$@_______
 LOG_SECTION_SEP   = >>$(LOG_FILE) echo ""
 LOG_SED_SPLIT_CLI = >>$(LOG_FILE) sed -e 's/^[\t]* *//g; s/ +/ /g; s/ -/ \\\n-/g' <<<
 BASE_CC = $(CC) $(CFLAGS) $(ADD_CFLAGS) -I$(SQLITE3_INC) -I$(SQLITE3_INC)/build
-BASE_LD = $(CC) $(CFLAGS) -shared $^ $(ADD_LDLAGS) -o $@ \
+BASE_LD = $(CC) $(CFLAGS) -shared $^ $(ADD_LDFLAGS) -o $@ \
           -Wl,--kill-at -Wl,--strip-all -Wl,--out-implib,lib$(@:.dll=.a) \
           $(LMSVCRT) -lgdi32 -lcomdlg32 -ladvapi32 -lshell32 -luser32 -lkernel32
 
@@ -85,6 +85,28 @@ all: sqlite3odbc$(SEEEXT).dll \
 	inst.exe instq.exe uninst.exe uninstq.exe \
 	adddsn.exe remdsn.exe addsysdsn.exe remsysdsn.exe \
 	SQLiteODBCInstaller.exe $(SQLITE3_EXE)
+
+all_sqlite3: sqlite3.c shell.c libshell.c sqlite3ex.c
+
+
+sqlite3.c shell.c: Makefile
+		$(MAKE) $@
+
+libshell.c: shell.c
+		sed -e 's/^int SQLITE_CDECL main/int SQLITE_CDECL sqlite3_main/;' \
+      		-e 's/appendText/shAppendText/g;' \
+			$< >>$@
+
+sqlite3ex.c: sqlite3.c libshell.c config.h
+		echo "/************************** Begin config.h ********************************/" >$@; \
+		cat config.h >>$@; \
+		echo "/************************** End config.h **********************************/" >>$@; \
+		echo "/************************** Begin sqlite3.c *******************************/" >>$@; \
+		cat sqlite3.c >>$@; \
+		echo "/************************** Begin libshell.c ******************************/" >>$@; \
+		cat libshell.c >>$@; \
+		echo "/************************** End libshell.c ********************************/" >>$@; \
+		cp $@ ../sqlite3.c
 
 
 sqlite3a10n.o: CCEX = $(BASE_CC) $(SQLITE3_A10N_FLAGS) -c $(SQLITE3_A10N) -o $@
