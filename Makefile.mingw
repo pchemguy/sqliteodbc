@@ -4,12 +4,13 @@
 MINGW =		
 CC =		$(MINGW)gcc
 STRIP =		$(MINGW)strip
-RC =		$(MINGW)windres -F pe-i386
+RC =		$(MINGW)windres
 MAKENSIS =	makensis
 
 DRV_VER=	$(shell cat VERSION)
 
 CFLAGS=		-O2 -Wall -static-libgcc -static-libstdc++ -DNDEBUG=1 -DDRIVER_VER_INFO=\"$(DRV_VER)\"
+
 
 ifeq ($(MSVCRT),70)
 	CFLAGS += -D__MSVCRT_VERSION=0x0700
@@ -28,7 +29,9 @@ ifeq ($(MSVCRT),100)
 	LMSVCRT = -nodefaultlibs -lmingw32 -lgcc_eh -lmoldname -lmingwex -lgcc -lmsvcr100 -lmsvcrt
 endif
 ifeq ($(LMSVCRT),)
-	CFLAGS += -D_USE_32BIT_TIME_T=1
+	ifeq ($(MSYSTEM),MINGW32)
+		CFLAGS += -D_USE_32BIT_TIME_T=1
+	endif
 	LMSVCRT = -lmsvcrt
 endif
 
@@ -45,7 +48,7 @@ SQLITE3_FLAGS = \
 		-DHAVE_SQLITE3CLOSEV2=1 \
 		-DHAVE_SQLITE3STRNICMP=1 \
 		-DHAVE_SQLITE3TABLECOLUMNMETADATA=1
-SQLITE3_A10N =	sqlite3/sqlite3.c
+SQLITE3_A10N = sqlite3/sqlite3.c
 SQLITE3_A10N_FLAGS = \
 		-DWIN32=1 -DNDEBUG=1 -DNO_TCL -DTHREADSAFE=1 \
 		-DSQLITE_ENABLE_COLUMN_METADATA=1 \
@@ -56,6 +59,10 @@ SQLITE3_A10N_FLAGS = \
 		-DSQLITE_SOUNDEX=1
 
 ODBC_FLAGS = -DHAVE_LONG_LONG=1 -DHAVE_SQLROWOFFSET=1
+ifeq ($(MSYSTEM),MINGW64)
+	ODBC_FLAGS += -DHAVE_SQLLEN=1 -DHAVE_SQLULEN=1 -DHAVE_SQLROWCOUNT=1 \
+				  -DHAVE_SQLSETPOSIROW=1 -DPTRDIFF_T=ptrdiff_t
+endif
 ODBC_LIB = -lodbc
 
 LOG_FILE ?= makelog.log
