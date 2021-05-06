@@ -105,7 +105,7 @@ sqlite3.exe: sqlite3odbc$(SEEEXT).dll sqlite3/src/minshell.c sqliteres.o
 		    -Isqlite3 -L. -l$(<:.dll=) -o $@ 
 		$(STRIP) $@
 
-resource3.h:resource.h.in
+resource3.h: resource.h.in
 		VERS=`cat VERSION` ;\
 		VERS_C=`echo $$VERS | sed -e 's/\([0-9]\+\)[.]\([0-9]\+\).*/\1,\2/g'` ;\
 		sed -e 's/--VERS_C--/'$$VERS_C'/g' < resource.h.in | \
