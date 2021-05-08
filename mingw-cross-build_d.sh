@@ -2093,6 +2093,12 @@ $notcc || cp -p tcc-${TCCVER}/README TCC/doc/readme.txt
 echo "==============================="
 echo "Building ODBC drivers and utils"
 echo "==============================="
+cp ./sqlite3.sample.c ./sqlite3/sqlite3.c
+echo "Replace sqlite3/sqlite3.c for an alternative"
+echo "Should include patched libshell.c at the end"
+echo "and, possibly, compilation options at the top"
+echo "Press enter to continue..."
+read DUMMY
 if $nov2 ; then
     make -f Makefile_d.mingw-cross all_no2
 else
