@@ -1,7 +1,7 @@
 STATICLIB = libz.a
 
 CC = gcc
-CFLAGS = -O2
+CFLAGS =  -O2
 
 LD = $(CC)
 LDFLAGS =

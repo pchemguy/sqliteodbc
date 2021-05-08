@@ -27,6 +27,9 @@ VER3=3.32.3
 VER3X=3320300
 VERZ=1.2.8
 
+NO_SQLITE2=1
+NO_TCCEXT=1
+
 nov2=false
 if test -n "$NO_SQLITE2" ; then
     nov2=true

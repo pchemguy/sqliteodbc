@@ -2,7 +2,7 @@
 # using MinGW cross compiler
 
 MINGW =		
-CC =		$(MINGW)gcc
+CC =		$(MINGW)gcc -static-libgcc -static-libstdc++ 
 STRIP =		$(MINGW)strip
 RC =		$(MINGW)windres -F pe-i386
 MAKENSIS =	makensis
